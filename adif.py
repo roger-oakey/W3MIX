@@ -85,7 +85,7 @@ modes_and_submodes = {
     }
 
 #
-#Convert modes and submodes into regular expressions that can bve used for
+#Convert modes and submodes into regular expressions that can be used for
 #searching.
 #
 re_modes_and_submodes = {}
@@ -97,7 +97,7 @@ for mode in modes_and_submodes:
         print("""
 Severe error: "{}" mode not valid. QSO modes many not have blanks in their
               names. Please contact K0RLO@nankoweap" about this error and send
-              the pota_rapidlog.py file.
+              the adif.py file.
 """.format(mode))
         exit(1)
 
@@ -109,29 +109,116 @@ Severe error: "{}" mode not valid. QSO modes many not have blanks in their
     for submode in modes_and_submodes[mode]:
         re_modes_and_submodes[mode][re.sub(r'\s+', "", submode)] = submode
 
-#
-#This is the order that the ADIF tags will be placed into the file for
-#consistency
-#
-adif_tag_order = [
-    "STATION_CALLSIGN",
-    "OPERATOR",
-    "CALL",
-    "QSO_DATE",
-    "TIME_ON",
-    "BAND",
-    "MODE",
-    "SUBMODE",
-    "MY_SIG",
-    "MY_SIG_INFO",
-    "MY_STATE",
-    "SIG",
-    "SIG_INFO",
-    "RST_SENT",
-    "RST_RCVD",
-    "FREQ",
-    "FREQ_RX",
-    "TX_PWR",
-    "RX_PWR"
-    ]
-    
+def tag(tag_name, tag_contents):
+    """
+    Convert a tag name and contents to a correctly formatted ADIF tag format
+    <TAG_NAME:LENGTH_OF_CONTENTS>CONTENTS<b>
+
+    Arguments:
+        tag_name:       Name of the tag
+        tag_contents:   Contents of tag
+
+    Returns:
+        Correctly formatted ADIF tag wit a blank at the end
+    """
+
+    #
+    #Assure no blanks on front or end of tag name or contents
+    #
+    tag_name.strip()
+    tag_contents.strip()
+
+    #
+    #Return the correctly formatted tag with a blank at the end
+    #
+    return("<{}:{}>{} ".format(tag_name, len(tag_contents), tag_contents))
+
+def record(tags, tag_order=None):
+    """
+    Convert a dictonary of tags to an ADIF record and return the string.
+    If the list tag_order is given, generate the tags in that order, otherwise
+    generate in sort order.
+
+    Arguments:
+        tags:       Dictonary of tags and their contents
+        tag_order:  Order to generate tags in
+
+    Returns:
+        Correctly formatted ADIF record with <EOR>\n at end
+    """
+
+    #
+    #Make copy of dictonary so we don't modify the original
+    #
+    tags = tags.copy()
+
+    #
+    #If tag order not supplied, generate keys in sorted order
+    #
+    if not tag_order:
+        tag_order = sorted(tags.keys())
+
+    #
+    #Generate tags in requested order
+    #
+    adif_record = ""
+    for tag_name in tag_order:
+        if tag_name in tags:
+            #
+            #If the tag exists, generate it
+            #
+            adif_record += tag(tag_name, tags[tag_name])
+
+            #
+            #Remove the tag from the dictonary to see if we have any leftovers
+            #when we're done, which would be a severe error
+            #
+            del tags[tag_name]
+
+    #
+    #See if any leftover tags
+    #
+    if tags:
+        print("""
+Severe error: The following tags were left over after creating the ADIF record:
+              {}
+""".format(", ".join(sorted(tags.keys()))))
+        exit(1)
+
+    #
+    #Return the correctly formatted record with an <EOR> and newline at the end
+    #
+    return(adif_record + "<EOR>\n")
+
+def freq_to_band(freq):
+    """
+    Given a frequency, convert it to a band
+
+    Arguments:
+        freq:   Frequency to use to search for band
+
+    Returns:
+        False if no band found.
+        String containing band if frequency found in that range
+    """
+
+    #
+    #Convert string frequency to float (valid float format already verified)
+    #
+    freq = float(freq)
+
+    #
+    #Go through bands and check to see if frequency in range
+    #
+    for band in band_mapping:
+        if ((freq >= band_mapping[band][0]) and
+            (freq <= band_mapping[band][1])):
+            #
+            #Frequency in range, return band
+            #
+            return(band)
+
+    #
+    #Frequency not found in any band range, return False
+    #
+    return(False)

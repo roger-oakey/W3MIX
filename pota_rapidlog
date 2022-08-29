@@ -34,125 +34,38 @@ import time
 #### Import large tables and help files to de-clutter the program
 ####
 
+import adif
 import pota_rapidlog
+
+#
+#This is the order that the ADIF tags will be placed into the file for
+#consistency
+#
+adif_tag_support_and_order = [
+    "QSO_DATE",
+    "TIME_ON",
+    "STATION_CALLSIGN",
+    "OPERATOR",
+    "CALL",
+    "BAND",
+    "MODE",
+    "SUBMODE",
+    "MY_SIG",
+    "MY_SIG_INFO",
+    "MY_STATE",
+    "SIG",
+    "SIG_INFO",
+    "RST_SENT",
+    "RST_RCVD",
+    "FREQ",
+    "FREQ_RX",
+    "TX_PWR",
+    "RX_PWR"
+    ]
 
 ####
 #### Subroutines
 ####
-
-def adif_tag(tag_name, tag_contents):
-    """
-    Convert a tag name and contents to a correctly formatted ADIF tag format
-    <TAG_NAME:LENGTH_OF_CONTENTS>CONTENTS
-
-    Arguments:
-        tag_name:       Name of the tag
-        tag_contents:   Contents of tag
-
-    Returns:
-        Correctly formatted ADIF tag wit a blank at the end
-    """
-
-    #
-    #Assure no blanks on front or end of tag name or contents
-    #
-    tag_name.strip()
-    tag_contents.strip()
-
-    #
-    #Return the correctly formatted tag with a blank at the end
-    #
-    return("<{}:{}>{} ".format(tag_name, len(tag_contents), tag_contents))
-
-def adif_record(tags, tag_order=None):
-    """
-    Convert a dictonary of tags to an ADIF record and return the string.
-    If the list tag_order is given, generate the tags in that order, otherwise
-    generate in sort order.
-
-    Arguments:
-        tags:       Dictonary of tags and their contents
-        tag_order:  Order to generate tags in
-
-    Returns:
-        Correctly formatted ADIF record with <EOR>\n at end
-    """
-
-    #
-    #Make copy of dictonary so we don't modify the original
-    #
-    tags = tags.copy()
-
-    #
-    #If tag order not supplied, generate keys in sorted order
-    #
-    if not tag_order:
-        tag_order = sorted(tags.keys())
-
-    #
-    #Generate tags in requested order
-    #
-    adif_record = ""
-    for tag_name in tag_order:
-        if tag_name in tags:
-            #
-            #If the tag exists, generate it
-            #
-            adif_record += adif_tag(tag_name, tags[tag_name])
-
-            #
-            #Remove the tag from the dictonary to see if we have any leftovers
-            #when we're done, which would be a severe error
-            #
-            del tags[tag_name]
-
-    #
-    #See if any leftover tags
-    #
-    if tags:
-        print("""
-Severe error: The following tags were left over after creating the ADIF record:
-              {}
-""".format(", ".join(sorted(tags.keys()))))
-        exit(1)
-
-    #
-    #Return the correctly formatted record with an <EOR> and newline at the end
-    #
-    return(adif_record + "<EOR>\n")
-
-def freq_to_band(freq):
-    """
-    Given a frequency, convert it to a band
-
-    Arguments:
-        freq:   Frequency to use to search for band
-
-    Returns:
-        False if no band found.
-        String containing band if frequency found in that range
-    """
-
-    #
-    #Convert string frequency to float (valid float format already verified)
-    #
-    freq = float(freq)
-
-    #
-    #Go through bands and check to see if frequency in range
-    #
-    for band in pota_rapidlog.band_mapping:
-        if ((freq >= pota_rapidlog.band_mapping[band][0]) and
-            (freq <= pota_rapidlog.band_mapping[band][1])):
-            #
-            #Frequency in range, return band
-            #
-            return(band)
-
-    #
-    #Frequency not found in any band range, return False
-    #
-    return(False)
 
 def get_input(help_text, prompt):
     """
@@ -364,7 +277,7 @@ def see_if_band(band):
     #
     #If it's a band, return it.
     #
-    if band in pota_rapidlog.band_mapping:
+    if band in adif.band_mapping:
         return([band, ["", ""]])
     else:
         return(False)
@@ -407,7 +320,7 @@ def see_if_frequency(freq):
     #
     #Determine band
     #
-    band = freq_to_band(freq[0])
+    band = adif.freq_to_band(freq[0])
     if not band:
         #
         #Frequency not in valid frequency range
@@ -425,7 +338,7 @@ def see_if_frequency(freq):
     #
     #see if valid frequency
     #
-    if not freq_to_band(freq[1]):
+    if not adif.freq_to_band(freq[1]):
         #
         #Frequency not in valid frequency range
         #
@@ -502,18 +415,18 @@ def see_if_mode(mode_submode):
             #
             #We have a mode AND submode specified. See if it's a valid combo
             #
-            if mode in pota_rapidlog.re_modes_and_submodes:
+            if mode in adif.re_modes_and_submodes:
                 #
                 #Mode looks good, see if this is a valid submode for that mode
                 #
-                if submode in pota_rapidlog.re_modes_and_submodes[mode]:
-                    return([mode, pota_rapidlog.re_modes_and_submodes[mode][submode]])
+                if submode in adif.re_modes_and_submodes[mode]:
+                    return([mode, adif.re_modes_and_submodes[mode][submode]])
         else:
             #
             #We only have a mode. It could also be only a submode. Do an
             #exaustive search of modes and submodes for the string
             #
-            if mode in pota_rapidlog.re_modes_and_submodes:
+            if mode in adif.re_modes_and_submodes:
                 #
                 #Only a valid mode is specified. Return it and no submode
                 #
@@ -522,9 +435,9 @@ def see_if_mode(mode_submode):
             #Did not find a mode match, do an exhaustive search through all the
             #submodes for a match
             #
-            for mode_index in pota_rapidlog.re_modes_and_submodes.keys():
-                if mode in pota_rapidlog.re_modes_and_submodes[mode_index]:
-                    return([mode_index, pota_rapidlog.re_modes_and_submodes[mode_index][mode]])
+            for mode_index in adif.re_modes_and_submodes.keys():
+                if mode in adif.re_modes_and_submodes[mode_index]:
+                    return([mode_index, adif.re_modes_and_submodes[mode_index][mode]])
 
     #
     #Not a valid mode and submode
@@ -751,7 +664,11 @@ Do you wish to archive it and start a new log""".format(filename,
         #New log file to start, rename the old file
         #
         if get_yes_no(help_text, prompt, "N"):
-            os.rename(filename, filename + time.strftime("_%Y%m%d-%H%M%S", mtime))
+            new_filename = filename + time.strftime("_%Y%m%d-%H%M%S", mtime)
+            print("""
+Renaming existing log file "{}" to "{}"
+""".format(filename, new_filename))
+            os.rename(filename, new_filename)
 
 
 ####
@@ -1125,10 +1042,10 @@ Enter "N" if the specified operator is unable to perform an exchange with
                 #
                 f = open(log_filename, "w")
                 f.write(("Parks On The Air (POTA) rapid logger\n" +
-                    adif_tag("PROGRAMID", "POTA rapid logger") + "\n" +
-                    adif_tag("PROGRAMVERSION", rapid_logger_version) +
+                    adif.tag("PROGRAMID", "POTA rapid logger") + "\n" +
+                    adif.tag("PROGRAMVERSION", rapid_logger_version) +
                     "\n" +
-                    adif_tag("CREATED_TIMESTAMP",
+                    adif.tag("CREATED_TIMESTAMP",
                         time.strftime("%Y%m%d %H%M%S", utc)) +
                         "<EOH>\n"))
                 f.close()
@@ -1157,7 +1074,7 @@ Enter "N" if the specified operator is unable to perform an exchange with
                     #information
                     #
                     log_record["SIG_INFO"] = hunter_park
-                    f.write(adif_record(log_record, pota_rapidlog.adif_tag_order))
+                    f.write(adif.record(log_record, adif_tag_support_and_order))
                 #
                 #Keep the file closed to avoid dataloss
                 #
@@ -1168,7 +1085,7 @@ Enter "N" if the specified operator is unable to perform an exchange with
                 #contact
                 #
                 f = open(log_filename, "a")
-                f.write(adif_record(log_record, pota_rapidlog.adif_tag_order))
+                f.write(adif.record(log_record, adif_tag_support_and_order))
                 #
                 #Keep the file closed to avoid dataloss
                 #
