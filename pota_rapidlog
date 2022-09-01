@@ -12,11 +12,14 @@
 #### Global definitions
 ####
 
-rapid_logger_version = str(1)
+rapid_logger_version = "1"
 
-default_split = r'[,:;\s\t]+'
-rapidlog_help_file = "pota_rapidlog.help"
-adif_extension = ".adif"
+help = [
+    None,
+    """
+Replace with program help text
+"""
+    ]
 
 ####
 #### Import support modules
@@ -34,20 +37,21 @@ import time
 #### Import large tables and help files to de-clutter the program
 ####
 
+import k0rlo
 import adif
-import pota_rapidlog
 
 #
 #This is the order that the ADIF tags will be placed into the file for
 #consistency
 #
-adif_tag_support_and_order = [
+adif_tag_support_and_order = (
     "QSO_DATE",
     "TIME_ON",
     "STATION_CALLSIGN",
     "OPERATOR",
     "CALL",
     "BAND",
+    "BAND_RX",
     "MODE",
     "SUBMODE",
     "MY_SIG",
@@ -61,188 +65,36 @@ adif_tag_support_and_order = [
     "FREQ_RX",
     "TX_PWR",
     "RX_PWR"
-    ]
+    )
+
+band_tags = (
+    "BAND",
+    "BAND_RX"
+    )
+
+frequency_tags = (
+    "FREQ",
+    "FREQ_RX"
+    )
+
+power_tags = (
+    "TX_PWR",
+    "RX_PWR"
+    )
+
+rst_tags = (
+    "RST_SENT",
+    "RST_RCVD"
+    )
+
+mode_tags = (
+    "MODE",
+    "SUBMODE"
+    )
 
 ####
 #### Subroutines
 ####
-
-def get_input(help_text, prompt):
-    """
-    Get input string from console.
-    Print rapid logger help if "HELP" is specified and then ask for input again.
-    Strip off all leading and trailing blanks on input string.
-    Upcase input string if requested (Default).
-
-    Arguments:
-        help_text:  Text to print if help on this prompt is requested
-        prompt:     String to print as question prompt
-
-    Returns:
-        String read from console. If no input, a null string is returned ("")
-            which is boolean False in Python.
-    """
-
-    while(True):
-        #
-        #Get input, strip blanks and upcase
-        #
-        text = str(input(prompt)).strip().upper()
-        #
-        #If "EXIT" entered, exit
-        #
-        if text == "EXIT":
-            exit()
-
-        #
-        #If input is "?" or <Enter> without a default (question having a "[" in
-        #it), print help text
-        #
-        if (text == "?") or not (text or re.search(r'\[', prompt)):
-            print("""
-Type "EXIT" to exit logger.
-Type "?" for this help.
-""" + help_text + """
-Type "HELP" for more information.
-""")
-            continue
-
-        #
-        #If help file is not requested, get out of the query loop.
-        #
-        if text != "HELP":
-            break
-
-        #
-        #If the help file is missing, report and error but continue
-        #
-        if not os.path.exists(rapidlog_help_file):
-            print ("POTA rapid logger help file missing")
-            continue
-
-        #
-        #Print the help file, then re-ask for input
-        #
-        f = open(rapidlog_help_file, "r")
-        print (f.read())
-        f.close()
-
-    #
-    #Return the text from the console
-    #
-    return(text)
-
-def get_yes_no(help_text, prompt, default="Y"):
-    """
-    Get input string from console.
-    Print rapid logger help if "HELP" is specified and then ask for input again.
-    Strip off all leading and trailing blanks on input string.
-    Upcase input string if requested (Default).
-
-    Arguments:
-        help_text:  Text to print if help on this prompt is requested
-        prompt:     String to print as question prompt
-        default:    Default, Y or N if nothing typed
-
-    Returns:
-        True if yes
-        False if no
-    """
-
-    default_prompt = {"Y" : " [(Y), n]",
-        "N" : " [(N), y]"}
-
-    default = default[:1].upper()
-
-    #
-    #Runtime programming check: Make sure "Y" or "N" was supplied as a default.
-    #If this fails, the program immediately exits.
-    #
-    if default not in default_prompt:
-        print("""
-Severe error: Default supplied for get_yes_no was "{}". It must be "Y" or "N"
-""".format(default))
-        exit (1)
-
-    #
-    #Keep trying until you get a "Y", "N" or an <Enter> (which says take the
-    #default).
-    #
-    while(True):
-    
-        #
-        #Ask the question and get a response.
-        #
-        answer = get_input(help_text,
-            prompt.rstrip() + default_prompt[default] + ": ")
-
-        #
-        #If just <Enter>, set the response to the default.
-        #
-        if not answer:
-            answer = default
-
-        #
-        #If valid response, return True if "Y", False if "N".
-        #
-        if answer in default_prompt:
-            return(answer == "Y")
-
-        #
-        #Invalid response, report error and ask again.
-        #
-        print("""
-Error: First character of answer must be 'Y' or 'N' or <Enter> to use the
-       default of "{}".
-""".format(default))
-
-def valid_callsign(callsign, slash=True):
-    """
-    Validate the callsign against the expected format
-
-    Arguments:
-        callsign:   String containing callsign
-
-    Returns:
-        True if callsign formatted correctly
-        False if callsign formatted incorrectly
-    """
-
-    if slash:
-        if not re.fullmatch(r'[A-Z0-9]{3,}(/[A-Z0-9]+|$)', callsign):
-            #
-            #If an error is found, report it
-            #
-            print ("""
-Error: "{}" is not a valid format for a callsign.
-       It must be three or more letters and digits only.
-       Callsign may be terminated by a "/" followed by one or more letters and
-       digits.
-       Please re-enter callsign.
-""".format(callsign))
-            #
-            #Return invalid
-            #
-            return(False)
-    else:
-        if not re.fullmatch(r'[A-Z0-9]{3,}', callsign):
-            #
-            #If an error is found, report it
-            #
-            print ("""
-Error: "{}" is not a valid format for a callsign.
-       It must be three or more letters and digits only. It may NOT contain a
-       "/"!
-       Please re-enter callsign.
-""".format(callsign))
-            #
-            #Return invalid
-            #
-            return(False)
-    #
-    #Return valid
-    #
-    return(True)
 
 def get_filename(callsign, park, state):
     """
@@ -260,189 +112,7 @@ def get_filename(callsign, park, state):
 
     if state:
         state = "_" + state
-    return(callsign.replace("/", "-") + "_" + park + state + adif_extension)
-
-def see_if_band(band):
-    """
-    See if valid band specified. If so, return it. If not, return False
-
-    Arguments:
-        band:   String containing band to be verified
-
-    Returns:
-        Band string if correct
-        False if band string incorrectly formatted or not a valid band
-    """
-
-    #
-    #If it's a band, return it.
-    #
-    if band in adif.band_mapping:
-        return([band, ["", ""]])
-    else:
-        return(False)
-
-def see_if_frequency(freq):
-    """
-    See if valid frequency specified. If so, return it. If not, return False
-
-    Arguments:
-        freq:   String containing frequency/frequencies to be verified
-
-    Returns:
-        Band and array of frequencies if correctly formatted
-        False if frequencies are incorrectly formatted or not a valid
-            frequency
-    """
-
-    freq = re.split(default_split, freq)
-
-    #
-    #If more than two frequencies specified, it's an error
-    #
-    if len(freq) > 2:
-        return(False)
-
-    #
-    #If only one frequency specified, copy to second frequency
-    #
-    if len(freq) < 2:
-        freq.append(freq[0])
-
-    #
-    #Check transmit frequency for a valid format
-    #
-    if not re.fullmatch(r'(\.\d+)|(\d+\.?\d*)', freq[0]):
-        #
-        #Not a correctly formatted frequency, return False
-        return(False)
-
-    #
-    #Determine band
-    #
-    band = adif.freq_to_band(freq[0])
-    if not band:
-        #
-        #Frequency not in valid frequency range
-        #
-        return(False)
-
-    #
-    #Check receive frequency for a valid format
-    #
-    if not re.fullmatch(r'(\.\d+)|(\d+\.?\d*)', freq[1]):
-        #
-        #Not a correctly formatted frequency, return False
-        return(False)
-
-    #
-    #see if valid frequency
-    #
-    if not adif.freq_to_band(freq[1]):
-        #
-        #Frequency not in valid frequency range
-        #
-        return(False)
-
-    #
-    #Retrun band and xmit and rcv frequencies
-    #
-    return ([band, freq])
-
-def see_if_power(power):
-    """
-    See if valid power specified. If so, return it. If not, return False
-
-    Arguments:
-        band:   String containing power to be verified
-
-    Returns:
-        Power string if correct
-        False if band string incorrectly formatted
-    """
-
-    #
-    #If it's a power, return it.
-    #
-    if re.fullmatch(r'\d+W', power):
-        return(power[:-1])
-
-    return(False)
-
-def see_if_mode(mode_submode):
-    """
-    See if mode (and submode) specified. If so, return the mode and submode.
-
-    Arguments:
-        mode_submode:   String containing mode (and submode) to be verified
-
-    Returns:
-        [mode, submode] is valid.
-        False if mode or submode not valid
-    """
-
-    #
-    #Some submodes can have blanks in them (thanks a lot, folks). So I strip
-    #the blanks out for comparing, but keep around the original format for
-    #reporting
-    #
-    #OLIVIA
-    #OLIVIA OLIVIA8/500
-    #OLIVIA8/500
-    #
-    #So I need to generate all the possible permutations and combinations of
-    #mode and submode and throw it at the code that identifies it to see if I
-    #get a match somehow.
-    #
-
-    #
-    #Breakup the mode and submode
-    #
-    mode_submode = re.split(default_split, mode_submode)
-    
-    #
-    #Pull off mode and re-create submode in case they're blanks in it (like the
-    #OLIVIA submodes have)
-    #
-    mode_text = mode_submode.pop(0)
-    submode_text = "".join(mode_submode)
-
-    #
-    #Try identifying it as both a mode and submode and just a submode
-    #
-    for (mode, submode) in [[mode_text, submode_text], [mode_text + submode_text, ""]]:
-        if submode:
-            #
-            #We have a mode AND submode specified. See if it's a valid combo
-            #
-            if mode in adif.re_modes_and_submodes:
-                #
-                #Mode looks good, see if this is a valid submode for that mode
-                #
-                if submode in adif.re_modes_and_submodes[mode]:
-                    return([mode, adif.re_modes_and_submodes[mode][submode]])
-        else:
-            #
-            #We only have a mode. It could also be only a submode. Do an
-            #exaustive search of modes and submodes for the string
-            #
-            if mode in adif.re_modes_and_submodes:
-                #
-                #Only a valid mode is specified. Return it and no submode
-                #
-                return([mode, ""])
-            #
-            #Did not find a mode match, do an exhaustive search through all the
-            #submodes for a match
-            #
-            for mode_index in adif.re_modes_and_submodes.keys():
-                if mode in adif.re_modes_and_submodes[mode_index]:
-                    return([mode_index, adif.re_modes_and_submodes[mode_index][mode]])
-
-    #
-    #Not a valid mode and submode
-    #
-    return(False)
+    return(callsign.replace("/", "-") + "_" + park + state + adif.extension)
 
 ###############################################################################
 ###############################################################################
@@ -462,20 +132,19 @@ def see_if_mode(mode_submode):
 #an operator in case they're not available for that particular contact.
 #
 
-help_text = """
+help[0] = """
 Enter one or more operator callsigns (operators "sharing a microphone").
     Callsigns may include the "/" character.
-    Examples: "K0RLO", "K0RLO W1JU" or "K0RLO/R01"
+    Examples: "K0RLO", "K0RLO W1JU" or "K0RLO/R1"
 """
 while(True):
-    operators = get_input(help_text, "Operator callsign(s): ")
-
+    operators = k0rlo.get_input(help, "Operator callsign(s): ")
     #
     #Validate callsign format of all operators supplied
     #
     bad_callsign = False
     ops = {}
-    for operator in re.split(default_split, operators):
+    for operator in re.split(k0rlo.default_split, operators):
         #
         #Save operator in dictonary to eliminate duplicates
         #
@@ -483,7 +152,10 @@ while(True):
         #
         #Validate callsign
         #
-        bad_callsign = bad_callsign or (not valid_callsign(operator))
+        report_error = k0rlo.valid_callsign(operator)
+        if report_error:
+            print(report_error)
+            bad_callsign = True
 
     #
     #If a bad callsign format was detected, ask the callsign question again
@@ -504,20 +176,20 @@ operators = sorted(ops.keys())
 #Multiple parks may be specified so if you're in a park next to a national
 #scenic trail, for example, you can log both at once.
 #
-help_text = """
-Enter one or more park codes. Multiple park codes are when yo're activating
+help[0] = """
+Enter one or more park codes. Multiple park codes are when you're activating
     multiple parks from one location.
-    Examples: "K-1111" or "K-1111 K-2222"
+    Examples: "K-1211" or "K-1211 K-1214"
 """
 while(True):
-    parks = get_input(help_text, "Park code(s): ")
+    parks = k0rlo.get_input(help, "Park code(s): ")
 
     #
     #Validate park format
     #
     bad_park = False
     pks = {}
-    for park in re.split(default_split, parks):
+    for park in re.split(k0rlo.default_split, parks):
         #
         #Save park in dictonary to eliminate duplicates
         #
@@ -531,8 +203,8 @@ while(True):
             #
             print ("""
 Error: "{}" is not a valid format for a park.
-       It must be one or more lettes, follwed by a dash and then four digits.
-       Please re-enter park number.
+       It must be one or more letters, followed by a dash and then four digits.
+       Examples: "K-1211" or "K-1214".
 """.format(park))
             bad_park = True
 
@@ -551,16 +223,16 @@ parks = sorted(pks.keys())
 #### Ask for state
 ####
 
-help_text = """
-Type <Enter> if no state specified.
-Enter state or province identifier
+help[0] = """
+Type <Enter> if no state is to be specified.
+    Enter state or province identifier
     Examples: "CO" or "US-CO"
 """
 while(True):
     #
     #Get optional state information that will be added at end of filename
     #
-    state = get_input(help_text, 'State/province/etc. of activation [NONE]: ')
+    state = k0rlo.get_input(help, 'State/province/etc. of activation [NONE]: ')
 
     #
     #If no state, get out of loop
@@ -594,12 +266,12 @@ Error: {} is not a valid state format. State/province/etc. must start and end
 #Note: only one callsign allowed for a special event.
 #
 while(True):
-    hekp_text = """
+    help[0] = """
 Type <Enter> if this is not a special event.
-Enter the special event callsign.
+    Enter the special event callsign.
     Examples: "W4W" or "W3MX"
 """
-    special_event_callsign = get_input(help_text,
+    special_event_callsign = k0rlo.get_input(help,
         'Special event callsign [NONE]: ')
 
     #
@@ -611,15 +283,14 @@ Enter the special event callsign.
     #
     #Validate callsign of special event
     #
-    if valid_callsign(special_event_callsign, slash=False):
+    report_error = k0rlo.valid_callsign(special_event_callsign, slash=False)
+    if report_error:
         #
-        #If valid, exit
+        #If invalid, report
         #
+        print(report_error)
+    else:
         break
-
-    #
-    #No need to report an error because valid_callsign did
-    #
 
 ####
 #### See if this is a continuation of an existing log or if a new log should
@@ -634,7 +305,7 @@ if special_event_callsign:
 else:
     callsigns = operators
 
-help_text = """
+help[0] = """
 Enter "N" (or just press <Enter>) if you wish to continue to log hunter
     contacts in the existing file.
 Enter "Y" if you wish to archive the existing log file (with the last modified
@@ -663,7 +334,7 @@ Do you wish to archive it and start a new log""".format(filename,
         #
         #New log file to start, rename the old file
         #
-        if get_yes_no(help_text, prompt, "N"):
+        if k0rlo.get_yes_no(help, prompt, "N"):
             new_filename = filename + time.strftime("_%Y%m%d-%H%M%S", mtime)
             print("""
 Renaming existing log file "{}" to "{}"
@@ -676,26 +347,30 @@ Renaming existing log file "{}" to "{}"
 ####
 
 while(True):
-    help_text = """
-Enter the band.
-    Examples: "20M" or "70CM"
-Enter the transmit frequency. If split frequency enter transmit frequency
-    first, followed by the recieve frequency.
+    help[0] = """
+Enter the band or frequency. If you enter a frequency, the band will be
+    automatically set.
+    If split bands enter transmit band first, followed by the
+    receive band.
+    Examples: "20M", "70CM" or "40M 20M"
+    Or, enter the transmit frequency. If split frequency enter transmit
+    frequency first, followed by the receive frequency.
     Examples: "14.215" or "114.215 14.275"
 """
-    freq = get_input(help_text, "Band or frequency: ")
+    freq = k0rlo.get_input(help, "Band or frequency: ")
 
     #
     #Validate band or frequency
     #
-    test = see_if_band(freq)
-    if test:
-        (band, frequency) = test
+    test = adif.valid_band(freq)
+    if type(test) != str:
+        bands = test
+        frequencies = []
         break
 
-    test = see_if_frequency(freq)
-    if test:
-        (band, frequency) = test
+    test = adif.valid_frequency(freq)
+    if type(test) != str:
+        (bands, frequencies) = test
         break
 
     #
@@ -703,8 +378,11 @@ Enter the transmit frequency. If split frequency enter transmit frequency
     #
     print("""
 Error: Incorrectly formatted band or frequency. Band should be entered as "20M"
-       or "70CM" or frequency should be entered as "14.215". If split
-       frequencies, enter transmit frequency first ("114.215 14.275").
+       or "70CM" or frequency should be entered as "14.215". If split bands or
+       frequencies, enter transmit band or frequency first,
+       Examples:
+           Band: "20M", "40M" or for split: "20M 40M".
+           Frequency: "14.215", "14.275" or for split: "14.215 14.275"
 """)
 
 ####
@@ -712,43 +390,30 @@ Error: Incorrectly formatted band or frequency. Band should be entered as "20M"
 ####
 
 while(True):
-    help_text = """
+    help[0] = """
 Enter the QSO mode and, if desired, the submode. Note that you can specify JUST
     the submode and the mode will be determined.
     Examples: "CW", "SSB", "SSB USB", "LSB", "OLIVIA 4/125"
 """
-    mode = get_input(help_text, "Operating mode: ")
+    mode = k0rlo.get_input(help, "Operating mode: ")
 
     #
     #Validate mode
     #
-    test = see_if_mode(mode)
-    if test:
-        (mode, submode) = test
+    test = adif.valid_mode(mode)
+    if type(test) != str:
+        mode_submode = test
         break
 
     #
     #Report error and ask again
     #
-    report_text = re.split(default_split, mode)
-    mode = report_text.pop(0)
-    submode = " ".join(report_text)
-    if submode:
-        print("""
-Error: {0} is not a recognized mode or {1} is not a recognized
-       submode of {0}. Please input mode and submode such as
-       "SSB USB" or"JT9 JT9H FAST".
-""".format(mode))
-    else:
-        print("""
-Error: {} is not a recognized mode or submode. Input mode such as
-       "CW", "SSB" or "LSB".
-""".format(mode))
+    print(test)
 
 #
 #Do not report power unless specified
 #
-xmit_power = ""
+power = ["0","0"]
 
 #### Now log the hunters
 ####
@@ -768,79 +433,90 @@ while (True):
     #
     #See if power is being reported
     #
-    if xmit_power:
-        report_power = xmit_power + "W"
+    if power[0] != "0":
+        display_power = power[0] + "W"
     else:
-        report_power = "NOPWR"
+        display_power = "NOPWR"
 
-    if submode:
-        report_mode = submode
+    if len(mode_submode) > 1:
+        display_mode = mode_submode[1]
     else:
-        report_mode = mode
+        display_mode = mode_submode[0]
+
+    #
+    #Do not report hunter power unless specified in log entry
+    #
+    power[1] = "0"
 
     #
     #Get hunter information
     #
-    help_text = """
+    help[0] = """
 At this prompt you can do the following:
     Specify a new mode and optionally a submode, such as "CW" or "SSB USB".
-    Specify a new band, such as "20M" (frequency will not be recorded).
+    Specify a new band or transmit AND receive band, such as
+        "20M" or "20M 40M".
+        If you specify the band, no frequency will not be recorded.
     Specify a new frequency or transmit AND receive frequency, such as
-        "14.215" or "14.215 14.275" (this will automatically set the band).
+        "14.215" or "14.215 14.275"
+        If you specify the frequency, the band will be correctly set.
     Specify a new transmit power, such as "100W". Enter "0W" to stop recording
         a transmit power.
 
     Enter a hunter contact:
         Enter the hunter's callsign, followed by optional information like sent
-        and received RSTs, hunter power and park to park identifier(s).
+        and received RSTs, hunter transmit power and park to park
+        identifier(s).
 
-        All optional information may be entered in any order.
+        All optional information may be entered in ANY order.
 """
-    hunter_info = get_input(help_text, 
-"({}:{}:{}) Hunter contact information: ".format(band,report_mode,report_power))
+    hunter_info = k0rlo.get_input(help, 
+"({}:{}:{}) Hunter contact information: ".format(bands[0], display_mode,
+        display_power))
 
     #
-    #See if a new band has been specified
+    #See if new band(s) have been specified
     #
-    test = see_if_band(hunter_info)
-    if test:
+    test = adif.valid_band(hunter_info)
+    if type(test) != str:
         #
         #Save both band and no frequencies
         #
-        (band, frequency) = test
+        bands = test
+        frequencies = []
         continue
 
     #
-    #See if a new frequency has been specified
+    #See ifnew frequency (-ies) have been specified
     #
-    test = see_if_frequency(hunter_info)
-    if test:
+    test = adif.valid_frequency(hunter_info)
+    if type(test) != str:
         #
-        #Save both band and frequency
+        #Save both band(s) and frequencies
         #
-        (band, frequency) = test
+        (bands, frequencies) = test
         continue
 
     #
     #See if a new mode has been specified
     #
-    test = see_if_mode(hunter_info)
-    if test:
-        (mode, submode) = test
+    test = adif.valid_mode(hunter_info)
+    if type(test) != str:
+        mode_submode = test
         continue
 
     #
     #See if a new power has been specified
     #
-    test = see_if_power(hunter_info)
-    if test:
-        if test == "0":
-            #
-            #Do not report power any longer
-            #
-            xmit_power = ""
-        else:
-            xmit_power = test
+    test = adif.valid_power(hunter_info)
+    if type(test) != str:
+        #
+        #Save new power. Setting power to "0" will cause no power to be
+        #reported.
+        #
+        #Unpack tuple into activator power [0]
+        #
+        (power[0],) = test
         continue
 
     ####
@@ -858,7 +534,7 @@ At this prompt you can do the following:
     #string) or RST reports and/or a park-to-park which will specify
     #the park as following character strings.
     #
-    hunter_info = re.split(default_split, hunter_info)
+    hunter_info = re.split(k0rlo.default_split, hunter_info)
 
     #
     #Get the hunter callsign which is the first (and perhaps
@@ -869,13 +545,20 @@ At this prompt you can do the following:
     #
     #Start off with checking if it's a bad callsign
     #
-    bad_entry = not valid_callsign(hunter_callsign)
+    report_error = k0rlo.valid_callsign(hunter_callsign)
+    if report_error:
+        print(report_error)
+
+    #
+    #Initialize bad_info based upon the validation of the callsign
+    #
+    bad_entry = bool(report_error)
 
     #
     #Split the remainder of the info into RST reports and parks, if any
     #
     hunter_parks = {}
-    hunter_power = []
+    hunter_power = {}
     rst = []
     bad_strings = []
 
@@ -909,7 +592,7 @@ At this prompt you can do the following:
             #
             #It's an hunter power, save it as an power removing the "W"
             #
-            hunter_power.append(component[:-1])
+            hunter_power[component] = True
             continue
 
         #
@@ -919,9 +602,8 @@ At this prompt you can do the following:
         bad_entry = True
 
     #
-    #Verify we have no more than one power entry. Default to no rcv power.
+    #Verify we have no more than one power entry.
     #
-    recv_power = ""
     if hunter_power:
         if len(hunter_power) > 1:
             print("""
@@ -929,29 +611,25 @@ Error: More than one power entry. The hunter can only have one power entered.
 """)
             bad_entry = True
         #
-        #Save recieve power
+        #Save receive power - only one entry in the dictonary, get its key
+        #and strip the "W" off the end.
         #
-        recv_power = hunter_power[0]
+        power[1] = list(hunter_power)[0][:-1]
 
 
     #
     #Verify we have no more than 2 RST entries
     #
-    rst_sent = ""
-    rst_rcvd = ""
-    if rst:
-        if len(rst) > 2:
-            print("""
+    if len(rst) > 2:
+        print("""
 Error: More than two RST entries. The RST report you send to the hunter is the
-first RST report, the second RST is what the hunter reports to you.
+       first RST report, the second RST is what the hunter reports to you.
+       Examples: "59", "589" or "59 59".
 """)
-            #
-            #Ask for all the info again
-            #
-            bad_entry = True
-        rst_sent = rst[0]
-        if len(rst) > 1:
-            rst_rcvd = rst[1]
+        #
+        #Ask for all the info again
+        #
+        bad_entry = True
 
     #
     #Report any strings we didn't recognize
@@ -962,7 +640,7 @@ first RST report, the second RST is what the hunter reports to you.
         #
         print("""
 Error: "{}" is not a recognized entry. Press <Enter> to get help on how to
-       enter information in the 
+       enter information on the hunter contact information line.
 """.format(errors))
         bad_entry = True
     #
@@ -974,33 +652,63 @@ Error: "{}" is not a recognized entry. Press <Enter> to get help on how to
 
     ####
     #### Start assembling the record to be logged, start with the stuff
-    #### common to all the record(s) to be written.
+    #### common to all the record(s) to be written. Start with a ADIF record
+    #### only containing MY_SIG = POTA
     ####
-    log_record = {}
-    log_record["CALL"] = hunter_callsign
+    log_record = {"MY_SIG":"POTA"}
+
+    #
+    #Save the date, time and hunter callsign
+    #
     log_record["QSO_DATE"] = time.strftime("%Y%m%d", utc)
     log_record["TIME_ON"] = time.strftime("%H%M%S", utc)
-    log_record["BAND"] = band
-    log_record["MODE"] = mode
-    if submode:
-        log_record["SUBMODE"] = submode
+    log_record["CALL"] = hunter_callsign
+
+    #
+    #Save transmit, and optionally receive band in record
+    #
+    for index in range(len(bands)):
+        log_record[band_tags[index]] = bands[index]
+
+    #
+    #Save mode and submode
+    #
+    for index in range(len(mode_submode)):
+        log_record[mode_tags[index]] = mode_submode[index]
+
+    #
+    #Save transmit, and optionally receive frequencies in record
+    #
+    for index in range(len(frequencies)):
+        log_record[frequency_tags[index]] = frequencies[index]
+
+    #
+    #Save optional transmit and receive power in record
+    #
+    for index in range(len(power)):
+        if power[index] != "0":
+            #
+            #If there is a power specified, report it
+            #
+            log_record[power_tags[index]] = power[index]
+
+    #
+    #Save sent and received RST, if specified
+    #
+    for index in range(len(rst)):
+        log_record[rst_tags[index]] = rst[index]
+
+    #
+    #Save state if specified
+    #
     if state:
         log_record["MY_STATE"] = state
-    log_record["MY_SIG"] = "POTA"
-    if frequency[0]:
-        log_record["FREQ"] = frequency[0]
-        if frequency[0] != frequency[1]:
-            log_record["FREQ_RX"] = frequency[1]
-    if xmit_power:
-        log_record["TX_PWR"] = xmit_power
-    if recv_power:
-        log_record["RX_PWR"] = recv_power
 
     #
     #Log contacts for all operators (any input will skip an
     #operator from having a log entry)
     #
-    help_text = """
+    help[0] = """
 Enter "Y" (or just press <Enter>) if the specified operator has performed an
     exchange with the hunter and they wish to receive credit for the contact.
 Enter "N" if the specified operator is unable to perform an exchange with
@@ -1008,7 +716,7 @@ Enter "N" if the specified operator is unable to perform an exchange with
 """
     for operator in operators:
         if ((len(operators) > 1) and
-            not get_yes_no(help_text, "Log contact for " + operator, "Y")):
+            not k0rlo.get_yes_no(help, "Log contact for " + operator, "Y")):
             #
             #If "N" typed, skip this operator
             #
