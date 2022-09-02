@@ -139,7 +139,8 @@ Enter one or more operator callsigns (operators "sharing a microphone").
     Examples: "K0RLO", "K0RLO W1JU" or "K0RLO/R1"
 """
 while(True):
-    operators = k0rlo.get_input(help, "Operator callsign(s): ")["UPCASE"]
+    operators = k0rlo.get_input(help, """
+Operator callsign(s): """)["UPCASE"]
     #
     #Validate callsign format of all operators supplied
     #
@@ -184,7 +185,8 @@ Enter one or more park codes. Multiple park codes are when you're activating
     Examples: "K-1211" or "K-1211 K-1214"
 """
 while(True):
-    parks = k0rlo.get_input(help, "Park code(s): ")["UPCASE"]
+    parks = k0rlo.get_input(help, """
+Park code(s): """)["UPCASE"]
 
     #
     #Validate park format
@@ -234,7 +236,8 @@ while(True):
     #
     #Get optional state information that will be added at end of filename
     #
-    state = k0rlo.get_input(help, 'State/province/etc. of activation [NONE]: ')["UPCASE"]
+    state = k0rlo.get_input(help, """
+State/province/etc. of activation [NONE]: """)["UPCASE"]
 
     #
     #If no state, get out of loop
@@ -274,7 +277,8 @@ Type <Enter> if this is not a special event.
     Examples: "W4W" or "W3MX"
 """
     special_event_callsign = k0rlo.get_input(help,
-        'Special event callsign [NONE]: ')["UPCASE"]
+        """
+Special event callsign [NONE]: """)["UPCASE"]
 
     #
     #If nothing entered, leave special_event_callsign blank
@@ -359,7 +363,8 @@ Enter the band or frequency. If you enter a frequency, the band will be
     frequency first, followed by the receive frequency.
     Examples: "14.215" or "114.215 14.275"
 """
-    freq = k0rlo.get_input(help, "Band or frequency: ")["UPCASE"]
+    freq = k0rlo.get_input(help, """
+Band or frequency: """)["UPCASE"]
 
     #
     #Validate band or frequency
@@ -397,7 +402,8 @@ Enter the QSO mode and, if desired, the submode. Note that you can specify JUST
     the submode and the mode will be determined.
     Examples: "CW", "SSB", "SSB USB", "LSB", "OLIVIA 4/125"
 """
-    mode = k0rlo.get_input(help, "Operating mode: ")["UPCASE"]
+    mode = k0rlo.get_input(help, """
+Operating mode: """)["UPCASE"]
 
     #
     #Validate mode
@@ -411,6 +417,11 @@ Enter the QSO mode and, if desired, the submode. Note that you can specify JUST
     #Report error and ask again
     #
     print(test)
+
+#
+#Put a space before the first log entry
+#
+print("")
 
 #
 #Do not report power unless specified
