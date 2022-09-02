@@ -31,7 +31,7 @@ import shutil
 import sys
 import time
 
-#print(sys.argv)
+comment_re = r'"[\ -\!\#-\~]*("|$)?'
 
 ####
 #### Import large tables and help files to de-clutter the program
@@ -64,7 +64,8 @@ adif_tag_support_and_order = (
     "FREQ",
     "FREQ_RX",
     "TX_PWR",
-    "RX_PWR"
+    "RX_PWR",
+    "COMMENT"
     )
 
 band_tags = (
@@ -138,7 +139,7 @@ Enter one or more operator callsigns (operators "sharing a microphone").
     Examples: "K0RLO", "K0RLO W1JU" or "K0RLO/R1"
 """
 while(True):
-    operators = k0rlo.get_input(help, "Operator callsign(s): ")
+    operators = k0rlo.get_input(help, "Operator callsign(s): ")["UPCASE"]
     #
     #Validate callsign format of all operators supplied
     #
@@ -163,6 +164,7 @@ while(True):
     if not bad_callsign:
         break
 
+
 #
 #Save unique operators
 #
@@ -182,7 +184,7 @@ Enter one or more park codes. Multiple park codes are when you're activating
     Examples: "K-1211" or "K-1211 K-1214"
 """
 while(True):
-    parks = k0rlo.get_input(help, "Park code(s): ")
+    parks = k0rlo.get_input(help, "Park code(s): ")["UPCASE"]
 
     #
     #Validate park format
@@ -232,7 +234,7 @@ while(True):
     #
     #Get optional state information that will be added at end of filename
     #
-    state = k0rlo.get_input(help, 'State/province/etc. of activation [NONE]: ')
+    state = k0rlo.get_input(help, 'State/province/etc. of activation [NONE]: ')["UPCASE"]
 
     #
     #If no state, get out of loop
@@ -272,7 +274,7 @@ Type <Enter> if this is not a special event.
     Examples: "W4W" or "W3MX"
 """
     special_event_callsign = k0rlo.get_input(help,
-        'Special event callsign [NONE]: ')
+        'Special event callsign [NONE]: ')["UPCASE"]
 
     #
     #If nothing entered, leave special_event_callsign blank
@@ -357,7 +359,7 @@ Enter the band or frequency. If you enter a frequency, the band will be
     frequency first, followed by the receive frequency.
     Examples: "14.215" or "114.215 14.275"
 """
-    freq = k0rlo.get_input(help, "Band or frequency: ")
+    freq = k0rlo.get_input(help, "Band or frequency: ")["UPCASE"]
 
     #
     #Validate band or frequency
@@ -395,7 +397,7 @@ Enter the QSO mode and, if desired, the submode. Note that you can specify JUST
     the submode and the mode will be determined.
     Examples: "CW", "SSB", "SSB USB", "LSB", "OLIVIA 4/125"
 """
-    mode = k0rlo.get_input(help, "Operating mode: ")
+    mode = k0rlo.get_input(help, "Operating mode: ")["UPCASE"]
 
     #
     #Validate mode
@@ -471,8 +473,11 @@ At this prompt you can do the following:
         All optional information may be entered in ANY order.
 """
     hunter_info = k0rlo.get_input(help, 
-"({}:{}:{}) Hunter contact information: ".format(bands[0], display_mode,
-        display_power))
+        "({}:{}:{}) Hunter contact information: ".format(bands[0],
+            display_mode, display_power))
+
+    original_hunter_info = hunter_info["ORIGINAL"]
+    hunter_info = hunter_info["UPCASE"]
 
     #
     #See if new band(s) have been specified
@@ -522,6 +527,42 @@ At this prompt you can do the following:
     ####
     #### Looks like we have a contact to log, log it
     ####
+
+    #
+    #Default to no comment
+    #
+    comment = ""
+
+    #
+    #See if a comment has been specified
+    #
+    quotes = original_hunter_info.count('"')
+    if quotes:
+        #
+        #There is a comment to be logged. Handle one or two quotes
+        #
+        if quotes > 2:
+            #
+            #More than two double quotes, that's an error
+            #
+            print("""
+Error: More than two double quotes '"' detected. A comment must have two double
+       quotes surrounding it, or start with a single double quote if at the end
+       of the line.
+""")
+            continue
+
+        #
+        #Pull out comment from opening quote to closing quote or EOL (re $)
+        #
+        comment = re.search(comment_re, original_hunter_info)[0][1:]
+        hunter_info = re.sub(comment_re, " ", hunter_info).strip()
+
+        #
+        #Remove closing quote if necessary
+        #
+        if quotes > 1:
+            comment = comment[0:-1].strip()
 
     #
     #Get the current GMT now so all logs for this hunter show
@@ -703,6 +744,12 @@ Error: "{}" is not a recognized entry. Press <Enter> to get help on how to
     #
     if state:
         log_record["MY_STATE"] = state
+
+    #
+    #Save comment if specified
+    #
+    if comment:
+        log_record["COMMENT"] = comment
 
     #
     #Log contacts for all operators (any input will skip an

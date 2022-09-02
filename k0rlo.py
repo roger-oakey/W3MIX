@@ -13,10 +13,12 @@ def get_input(help, prompt):
         help:   [0] Text to print if help on this prompt is requested
                 [1] Full program help.
         prompt: String to print as question prompt
+        upcase: If True, upcase the input
 
     Returns:
-        String read from console. If no input, a null string is returned ("")
-            which is boolean False in Python.
+        Tuple:  First string upcased input, second original input.
+                If no input, a null string is returned ("") which is boolean
+                False in Python.
     """
 
     #
@@ -31,7 +33,8 @@ def get_input(help, prompt):
         #
         #Get input, strip blanks and upcase
         #
-        text = str(input(prompt)).strip().upper()
+        original = str(input(prompt)).strip()
+        text = original.upper()
         #
         #If "EXIT" entered, exit
         #
@@ -61,9 +64,11 @@ Type "HELP" for more information.
         break
 
     #
-    #Return the text from the console
+    #Return the text from the console in the form of a tuple, upcase first
+    #entry, original case the second.
     #
-    return(text)
+    return({"UPCASE" : text, "ORIGINAL" : original})
+
 
 def get_yes_no(help, prompt, default="Y"):
     """
@@ -105,10 +110,10 @@ Severe error: Default supplied for get_yes_no was "{}". It must be "Y" or "N"
     while(True):
     
         #
-        #Ask the question and get a response.
+        #Ask the question and get an upcased response.
         #
         answer = get_input(help,
-            prompt.rstrip() + default_prompt[default] + ": ")
+            prompt.rstrip() + default_prompt[default] + ": ")["UPCASE"]
 
         #
         #If just <Enter>, set the response to the default.
