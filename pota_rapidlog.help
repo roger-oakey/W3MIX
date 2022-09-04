@@ -13,17 +13,22 @@ About pota_rapidlog:
     the radio and not have to pay attention to the screen to select logging
     fields.
 
-    pota_rapidlog supports changing of mode and band/frequency "on the fly"
-    allowing you to jump around the spectrum (and modes) if needed or desired.
+    pota_rapidlog is NOT designed to be a full-functionality logger, supporting
+    every conceivable log field - it just logs basic information to make
+    logging fast and simple.
+
+    pota_rapidlog supports changing the mode and band/frequency "on the fly"
+    allowing you to jump around the spectrum (and modes) when required.
 
     pota_rapidlog supports freeform input. At the very minimum all you need to
     enter is a hunter's callsign and all the other ADIF fields required for
-    POTA reporting will be filled out and stored. However, for you own logging
-    other fields are typically desirable, so in addition to just the hunter's
-    callsign you may enter the sent and received RST, the hunter's transmit
-    power and add a comment. These fields are ignored by the POTA logging
-    utility, but can be used to populate your personal logs with more complete
-    data.
+    POTA reporting will be logged. Many poeople, however wish to have a more
+    complete recording of contacts in their own log, so in addition to just the
+    hunter's callsign pota_rapidlog allows some additional basic inforamtion to
+    be logged, such as the sent and received RST, the transmit power and add a
+    comment. These fields are ignored by the POTA logging utility, but the
+    generated log can then be used to populate your personal log with more
+    complete data.
 
     pota_rapidlog will run on any system, Windows or Linux, that has Python3
     installed, but the primary platform which is was designed for are modern
@@ -35,9 +40,9 @@ Running pota_rapidlog:
 NOTE: At any question prompt you can type "?" and get detailed help for that
       specific question. If you type "HELP" this help will be printed again.
 
-    After installing pota_rapidlog (see end of help) "cd" into the K0RLO
-    directory, typically "cd ~/K0RLO" and type ./pota_rapidlog the following
-    setup questions will be asked:
+    After installing pota_rapidlog (see end of help) "cd ~/K0RLO" into the
+    K0RLO directory, type "./pota_rapidlog" and the following setup questions
+    will be asked:
 
     Operator callsign(s):
 
@@ -64,9 +69,9 @@ NOTE: At any question prompt you can type "?" and get detailed help for that
         ONE callsign here. It can have a "/" designation if necessary.
         Examples: "W1BOB" or "W1BOB/R01"
 
-NOTE: At this point pota_rapidlog knows the log file name. It will check to see
-      if a log file of that name already exists. If it does, the following
-      question will be asked:
+NOTE: At this point pota_rapidlog can figure out the log file name. It will
+      check to see if a log file of that name already exists. If it does, the
+      following question will be asked:
 
         POTA log already exists for this callsign and park: K0RLO_K-1111.adif
         Last modified on 2022/09/02 15:26:01 (Local time)
@@ -75,15 +80,15 @@ NOTE: At this point pota_rapidlog knows the log file name. It will check to see
       Press <Enter> (default of "NO") if you wish to ADD to the existing log.
       Type "N"<Enter> if you wish the existing log to be renamed (it won't be
       lost) and a new log started. pota_rapidlog will display new filename of
-      the renamed file.
+      the old log file.
 
     Band or frequency:
 
         The initial band or frequency being to be used. If you supply a
-        frequency the band will automatically be calculated. If you're running
+        frequency, the band will automatically be calculated. If you're running
         split operations, enter the transmit followed by the receive frequency.
         If you enter a band, no frequency will be logged.
-        Examples: "20M", "14.200" or if split, "14.200 14.300"
+        Examples: "20M", "14.200" or if split operations, "14.200 14.300"
 
     Operating mode:
 
@@ -96,7 +101,7 @@ NOTE: At this point pota_rapidlog knows the log file name. It will check to see
 
     (20M:USB:NOPWR) Hunter contact information:
 
-        Contact entry:
+        Entering a hunter contact:
 
             This is where you would start logging hunter contacts. Note that in
             this example we're using the "20M" band, our submode is "USB" and
@@ -105,14 +110,14 @@ NOTE: At this point pota_rapidlog knows the log file name. It will check to see
             callsign.
             Example: "w1ju"
 
-            But you can do much more.
+            But you can do more.
 
             If you and the hunter exchange RST information, you can enter that
             too in the order of your signal report to them, followed by
             optionally what they reported to you.
             Examples: "w1ju 59" or "w1ju 59 59"
 
-            For park-to-park contacts, enter the park the hunter/ activator is
+            For park-to-park contacts, enter the park the other activator is
             calling from. If they're simultaneously activating parks, just
             enter ALL the parks they're activating from.
             Examples: "w1ju k-1111" or "w1ju k-1111 k-2222 k-3333"
@@ -147,42 +152,52 @@ NOTE: If you entered more than one operator to the "Operator callsign(s)"
       Just press <Enter> (default of "YES") to log a contact for this operator,
       or "N"<Enter> to not log the contact for the specified operator. This
       used when more than one operator is sharing a microphone and one of them
-      steps away for a few minutes and does not participate in a couple of
-      contacts - pota_rapidlog will not log the contacts for the absent
-      operator.
+      steps away for a few minutes and does not participate in some contacts -
+      pota_rapidlog will not log the contacts for the absent operator.
 
-        Changing frequency, mode and power:
+        Changing frequency, mode and power "on the fly":
 
             At the "Hunter contact information:" prompt you also can change
             your frequency (or band), mode and transmit power without
-            restarting the program. Instead of entering a hunter's callsign as
-            the first entry, do the following:
+            restarting the program. Instead of entering a hunter's callsign
+            as the first entry, enter the frequency, band mode or power using
+            the following formats. Only one parameter (frequency, mode or
+            power) may be changed at a time.
 
-            To change the frequency, enter a new frequency or transmit and
-            receive frequencies if split operations. By entering a frequency
-            the band will automatically be calculated.
-            Examples: "14.200" or "14.200 14.300"
+            Changing frequency:
 
-            To change the band, enter a new band or transmit and receive band
-            if split operations. By entering a band no frequency will be
-            logged.
-            Examples: "20m" or "20m 20m"
+                To change the frequency, enter a new frequency or transmit and
+                receive frequencies if split operations. By entering a
+                frequency, the band will automatically be calculated.
+                Examples: "14.200" or "14.200 14.300"
 
-            To change the mode, enter a mode, a submode or both a mode and
-            submode.  If you specify both, the submode will be checked to
-            assure that it's a submode of the mode specified. If only a submode 
-            is specified, the mode will be automatically determined.
-            Examples: "CW", "SSB", "SSB USB" or "USB"
+            Changing band:
 
-            To change your transmit power, enter a power in watts (whole
-            numbers only) followed by a "W".
-            Examples: "100w", "5w" or "1500w"
+                To change the band, enter a new band or transmit and receive
+                band if split operations. By entering a band no frequency will
+                be logged.
+                Examples: "20m" or "20m 20m"
+
+            Changing mode:
+
+                To change the mode, enter a mode, a submode or both a mode and
+                submode.  If you specify both, the submode will be checked to
+                assure that it's a submode of the mode specified. If only a
+                submode is specified, the mode will automatically be
+                determined.
+                Examples: "CW", "SSB", "SSB USB" or "USB"
+
+            Changing power:
+
+                To change your transmit power, enter a power in watts (whole
+                numbers only) followed by a "W".
+                Examples: "100w", "5w" or "1500w"
 
 Exiting pota_rapidlog:
 
     To exit the program you can either press <CTRL-C> or type "exit" at any
-    prompt. pota_rapidlog never leaves the log file open, so there is no
-    danger to losing your data.
+    prompt. pota_rapidlog never leaves the log file open while running, so
+    there is no danger of losing your log data.
 
 pota_rapidlog ADIF file:
 
@@ -222,11 +237,11 @@ Installing pota_rapidlog:
         pota_rapidlog, type the following commands (note that character case is
         important!):
 
-            cd ~/K0RLO
-            ./pota_rapidlog
+            cd ~
+            ./K0RLO/pota_rapidlog
 
-        ...and pota_rapidlog will start running and your log files will found
-        in the same directory.
+        ...and pota_rapidlog will start running and your ADIF (.adif) log files
+        will found in your home directory.
 
         From time to time to assure that you have the latest and greatest
         version of pota_rapidlog, type the following two commands:

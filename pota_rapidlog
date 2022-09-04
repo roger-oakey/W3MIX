@@ -12,7 +12,7 @@
 #### Global definitions
 ####
 
-pota_rapidlog_version = "1"
+pota_rapidlog_version = "2022/09/04"
 
 ####
 #### Import support modules
@@ -90,7 +90,7 @@ mode_tags = (
 #### Subroutines
 ####
 
-def get_filename(callsign, park, state):
+def determine_filename(callsign, park, state):
     """
     Generate full filename based on the callsign, park date and time and
     optional identification. Replace "/" in callsigns with "-"
@@ -230,15 +230,17 @@ parks = sorted(pks.keys())
 
 help = """
 Type <Enter> if no state is to be specified.
-    Enter state or province identifier
-    Examples: "CO" or "US-CO"
+    Enter country and state identifier
+    Note: US states and territories are verified, everything else is accepted
+    as-is.
+    Examples: "US-CO" or "US-MP"
 """
 while(True):
     #
     #Get optional state information that will be added at end of filename
     #
     state = k0rlo.get_input(help, """
-State/province/etc. of activation [NONE]: """).upper()
+State/province/etc. of activation [None specified]: """).upper()
 
     #
     #If no state, get out of loop
@@ -247,22 +249,40 @@ State/province/etc. of activation [NONE]: """).upper()
         break
 
     #
-    #Validate state information
+    #See if this is a known country and if so, check its state or province to
+    #assure it's valid.
     #
-    if re.fullmatch(r'[A-Z]+(-[A-Z]+|$)', state):
+    state_split = re.split(r'[\s-]+', state)
+    if state_split[0] in adif.state_enumeration:
+        if len(state_split) != 2:
+            print("""
+Error: You must specify a country-state or country-province for an activation.
+""")
+            continue
+
         #
-        #We have the state
+        #Make it easier to handle the two
         #
-        break
+        (country, state) = state_split
+        #
+        #See if this state or province is valid within this country
+        #
+        if state in adif.state_enumeration[country]:
+            #
+            #Reassemble country and state and use it for logging
+            #
+            state = country + "-" + state
+            break
+
+        print("""          
+Error: "{}" is not a valid state or province for within country "{}"
+""".format(state_split[1], state_split[0]))
+        continue
 
     #
-    #Report error and ask again
+    #If we can't validate it, just accept whatever the person types
     #
-    print("""
-Error: {} is not a valid state format. State/province/etc. must start and end
-       with alphanumeric characters and can optionally contain one "-".
-""".format(state))
-
+    break
 
 ####
 #### Ask if this activation has a special event callsign
@@ -321,7 +341,7 @@ Enter "Y" if you wish to archive the existing log file (with the last modified
 
 for operator in callsigns:
     for park in parks:
-        filename = get_filename(operator, park, state)
+        filename = determine_filename(operator, park, state)
         #
         #If a log file by this name does not currently exist, keep looking
         #
@@ -775,6 +795,10 @@ Enter "N" if the specified operator is unable to perform an exchange with
     the hunter or they should not receive credit for the contact.
 """
     for operator in operators:
+        #
+        #This loop will log entries for ALL the operators that are "sharing a
+        #microphone".
+        #
         if ((len(operators) > 1) and
             not k0rlo.get_yes_no(help, "Log contact for " + operator, "Y")):
             #
@@ -787,22 +811,27 @@ Enter "N" if the specified operator is unable to perform an exchange with
         #
         for park in parks:
             #
-            #Determine filename based on special_event_callsign or not
+            #Log the operator
+            #
+            log_record["OPERATOR"] = operator
+
+            #
+            #Determine STATION_CALLSIGN and logfile name based on if there's a
+            #special_event_callsign or not.
             #
             if special_event_callsign:
                 log_record["STATION_CALLSIGN"] = special_event_callsign
-                log_record["OPERATOR"] = operator
             else:
                 log_record["STATION_CALLSIGN"] = operator
 
             #
             #Filename is always based on the STATION_CALLSIGN
             #
-            log_filename = get_filename(log_record["STATION_CALLSIGN"], park, state)
+            log_filename = determine_filename(log_record["STATION_CALLSIGN"], park, state)
 
             #
-            #We've waited until we REALLY need to create a log file, time to
-            #see if we need to create the file and write the header
+            #We wait until we REALLY need to create a log file. Time to see if
+            #we need to create the file now, and if so, write the header.
             #
             if not os.path.exists(log_filename):
                 #
