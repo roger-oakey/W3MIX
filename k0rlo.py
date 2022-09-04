@@ -1,6 +1,34 @@
+import os
 import re
+import sys
+
+#
+#Gather script information
+#
+script_path = os.path.abspath(sys.argv[0])
 
 default_split = r'[,:;\s\t]+'
+helpfile_extension = ".help"
+
+script_help = script_path + helpfile_extension
+
+#
+#See if a help file exists
+#
+if os.path.exists(script_help):
+    #
+    #If the help file exists, read it in
+    #
+    f = open(script_help, "r")
+    script_help = f.read()
+    f.close()
+else:
+    #
+    #No help file report no help
+    #
+    script_help = """
+No script help file.
+"""
 
 def get_input(help, prompt):
     """
@@ -10,8 +38,7 @@ def get_input(help, prompt):
     Upcase input string if requested (Default).
 
     Arguments:
-        help:   [0] Text to print if help on this prompt is requested
-                [1] Full program help.
+        help:   Text to print if help on this prompt is requested
         prompt: String to print as question prompt
         upcase: If True, upcase the input
 
@@ -21,24 +48,23 @@ def get_input(help, prompt):
                 False in Python.
     """
 
-    #
-    #Make copy of help list, and if no program-wide help file (second element
-    #of list false) only show question help if "HELP" is typed.
-    #
-    help_text = help.copy()
-    if (len(help_text) < 2) or (not help_text[1]):
-        help_text[1] = help_text[0]
-
     while(True):
         #
         #Get input, strip blanks and upcase
         #
-        original = str(input(prompt)).strip()
-        text = original.upper()
+        text = str(input(prompt)).strip()
+
+        #
+        #If help is  requested, display entire program help
+        #
+        if text.upper() == "HELP":
+            print(script_help)
+            continue
+
         #
         #If "EXIT" entered, exit
         #
-        if text == "EXIT":
+        if text.upper() == "EXIT":
             exit()
 
         #
@@ -49,25 +75,17 @@ def get_input(help, prompt):
             print("""
 Type "EXIT" to exit logger.
 Type "?" for this help.
-""" + help_text[0] + """
+""" + help + """
 Type "HELP" for more information.
 """)
-            continue
-
-        #
-        #If help is  requested, display entire program help
-        #
-        if text == "HELP":
-            print(help_text[1])
             continue
 
         break
 
     #
-    #Return the text from the console in the form of a tuple, upcase first
-    #entry, original case the second.
+    #Return the text from the console
     #
-    return({"UPCASE" : text, "ORIGINAL" : original})
+    return(text)
 
 
 def get_yes_no(help, prompt, default="Y"):
@@ -78,8 +96,7 @@ def get_yes_no(help, prompt, default="Y"):
     Upcase input string if requested (Default).
 
     Arguments:
-        help:       [0] Text to print if help on this prompt is requested
-                    [1] Full program help.
+        help:       Text to print if help on this prompt is requested
         prompt:     String to print as question prompt
         default:    Default, Y or N if nothing typed
 
@@ -113,13 +130,18 @@ Severe error: Default supplied for get_yes_no was "{}". It must be "Y" or "N"
         #Ask the question and get an upcased response.
         #
         answer = get_input(help,
-            prompt.rstrip() + default_prompt[default] + ": ")["UPCASE"]
+            prompt.rstrip() + default_prompt[default] + ": ").upper()
 
         #
         #If just <Enter>, set the response to the default.
         #
         if not answer:
             answer = default
+
+        #
+        #Reduce answer to first character and upcase
+        #
+        answer = answer[:1].upper()
 
         #
         #If valid response, return True if "Y", False if "N".
