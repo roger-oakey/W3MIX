@@ -5,21 +5,40 @@ import calendar
 import os
 import re
 import sys
+import time
 import traceback
-
-#
-#Gather useful script information
-#
-script_path = os.path.abspath(sys.argv[0])
 
 #
 #Global variables
 #
 
+ADIF_VERSION = "3.1.3"
+ADIF_VERSION_FIELD = "ADIF_VERSION"
+
 default_split = r'[,:;\s\t]+'
 helpfile_extension = ".help"
 adiffile_extension = ".adif"
 tuple_or_list = (tuple, list)
+
+cr = "\r"
+lf = "\n"
+crlf = cr + lf
+crlf_re = r'\r\n'
+cr_or_lf_re = r'[\r\n]'
+onlycr_re = r'\r[^\n]'
+onlylf_re = r'[^\r]\n'
+
+end_of_header = "<EOH>"
+end_of_record = "<EOR>"
+
+#
+#XML information for ADX support
+#
+adx_first_line = '<?xml version="1.0" encoding="UTF-8"?>'
+adx_adx     = "<ADX>"
+adx_header  = "    <HEADER>"
+adx_records = "    <RECORDS>"
+adx_record  = "        <RECORD>"
 
 ########################################################################
 ########################################################################
@@ -34,6 +53,7 @@ tuple_or_list = (tuple, list)
 #Script help file must be in the same directory as the script, and have
 #the same name of the script with ".help" added to the end of it.
 #
+script_path = os.path.abspath(sys.argv[0])
 script_help = script_path + helpfile_extension
 
 #
@@ -482,300 +502,10 @@ ArgError: validate_arg_type called with empty tuple or list."""
 ########################################################################
 ########################################################################
 #
-# Console input support functions
+# ADIF and ADX support functions
 #
 ########################################################################
 ########################################################################
-
-def get_input(prompt_help, prompt, default=None, can_exit=True):
-    """
-    Get input string from console.
-
-    If "HELP" is typed, print <script_name>.help file, if one exists.
-    If "EXIT" is typed and "can_exit" is True, exit the program.
-        Otherwise print message that the program cannot be exited and
-        reprint the prompt.
-    If "?" is typed, print specific help text for this question, if it
-        was supplied (suggestion: supply it!)
-    If nothing is typed (null string, "") and default is None, do the
-        same thing as "?". Otherwide return the default string so the
-        calling function can use it as if it was typed in.
-
-    If none of the above, strip off leading and trailing blanks and
-        pass the string back to the calling function.
-
-    Arguments:
-        prompt_help:
-            Text to print if help on this prompt is requested.
-        prompt:
-            String to print as question prompt.
-        default: Default None
-            None:
-                No default answer, print prompt help, then print prompt
-                again if just <Enter> ("") is pressed.
-            string:
-                String to return if just <Enter> ("") is pressed.
-        can_exit: Default True
-            True:
-                Exit the program if "EXIT" is typed.
-            False:
-                Print message that the program cannot be exited print
-                the prompt again.
-    Returns:
-        Input string to calling function.
-    """
-
-    validate_arg_type((
-        (prompt_help, str),
-        (prompt, str),
-        (default, str, None),
-        (can_exit, bool),
-    ))
-
-    while(True):
-        #
-        #Get input, strip blanks and upcase
-        #
-        text = str(input(prompt)).strip()
-
-        #
-        #If a default is specified and nothing entered (""), return
-        #default string.
-        #
-        if (default is not None) and (not text):
-            return(default)
-
-        #
-        #If help is  requested, display entire program help
-        #
-        if text.upper() == "HELP":
-            print(script_help)
-            continue
-
-        #
-        #If we can exit at this point and "EXIT" entered, exit
-        #
-        if text.upper() == "EXIT":
-            if can_exit:
-                sys.exit(0)
-            else:
-                print("Cannot exit at this point.\n\n")
-                continue
-
-        #
-        #If input is "?" or just <Enter> (null string - ""), print
-        #prompt help text if itexists.
-        #
-        if (text == "?") or (not text):
-            print("""
-Type "EXIT" to exit logger.
-Type "?" for this help.
-""" + prompt_help + """
-Type "HELP" for more information.
-""")
-            continue
-
-        break
-
-    #
-    #Return the text from the console
-    #
-    return(text)
-
-
-def get_yes_no(prompt_help, prompt, default="Y", can_exit=True):
-    """
-    Print prompt that requires a Y or N answer.
-
-    Arguments:
-        help:
-            Text to print if help on this prompt is requested.
-        prompt_help:
-            String to print as question prompt NOT including Y/N portion
-            of prompt.
-        default: Default "Y"
-            None:
-                No default answer, the user MUST answer "Y" or "N".
-            string:
-                "Y":
-                    Deafult answer to the question is "Yes".
-                "N":
-                    Deafult answer to the question is "No".
-        can_exit: Default True
-            True:
-                Exit the program if "EXIT" is typed.
-            False:
-                Print message that the program cannot be exited print
-                the prompt again.
-
-    Returns:
-        True if Yes
-        False if No
-    """
-
-    validate_arg_type((
-        (prompt_help, str),
-        (prompt, str),
-        (default, str, None),
-        (can_exit, bool),
-    ))
-
-    #
-    #Make the default for no default yes/no answer something the user
-    #can't possibly type by accident!
-    #
-    no_default_yes_no_answer = "XX_NO_DEFAULT_YES_NO_ANSWER_XX"
-
-    default_prompt = {
-        "Y" : " [(Y), n]: ",
-        "N" : " [(N), y]: ",
-        no_default_yes_no_answer : " [y, n]: "
-        }
-
-    if default is None:
-        default = no_default_yes_no_answer
-    else:
-        default = default[:1].upper()
-
-    #
-    #Runtime programming check: Make sure "Y", "N" or None was supplied
-    #as a default. If this fails, the program immediately exits.
-    #
-    if default not in default_prompt:
-        print("""
-SeverError: Default supplied for get_yes_no was "{}".
-            It must be "Y", "N" or None.
-""".format(default)
-    + generate_stack_trace(2))
-        sys.exit(1)
-
-    #
-    #Keep trying until you get a "Y", "N" or
-    #"XX_NO_DEFAULT_YES_NO_ANSWER_XX" (if no default and the user types
-    #just <ENTER>).
-    #
-    while(True):
-        #
-        #Ask the question and get an upcased response.
-        #
-        answer = get_input(prompt_help,
-            prompt.rstrip() + default_prompt[default],
-            default=default,
-            can_exit=can_exit).upper()
-
-        #
-        #At this point we have input. Let's hope it's a "Y" or "N" after
-        #we reduce it to the first character. Note that if there's no
-        #default, the string ("XX_NO_DEFAULT_YES_NO_ANSWER_XX"") starts
-        #with an "X" and once reduced to one character it won't match
-        #anything in the default_prompt dictonary, causing an error to
-        #be printed and the prompt displayed again.
-        #
-
-        #
-        #Reduce answer to first character
-        #
-        answer = answer[:1]
-
-        #
-        #If valid response, return True if "Y", False if "N".
-        #
-        if answer in default_prompt:
-            return(answer == "Y")
-
-        #
-        #Invalid response, report error and ask again.
-        #
-        if default == no_default_yes_no_answer:
-            print("""
-Error: First character of answer must be 'Y' or 'N', there is no
-       default.
-""")
-        else:
-            print("""
-Error: First character of answer must be 'Y' or 'N' or <Enter> to use
-       the default of "{}".
-""".format(default))
-
-def valid_callsign(callsign, slash=True):
-    """
-    Validate the callsign against the expected format - at least the
-    best we can given the lack of a hard standard... :)
-
-    Arguments:
-        callsign:
-            String containing callsign.
-        slash: Default True
-            True:
-                Slash is allowed in the callsign name.
-            False:
-                Slash will generate an "Invalid callsign" error.
-
-    Returns:
-        Valid callsign:
-            Null string ("")
-        Invalid callsign:
-            Error string.
-    """
-    
-    validate_arg_type((
-        (callsign, str),
-        (slash, bool)
-    ))
-
-    if slash:
-        if not re.fullmatch(r'[A-Z0-9]{3,}(/[A-Z0-9]+|$)', callsign):
-            #
-            #If an error is found, report it
-            #
-            return("""
-Error: "{}" is not a valid format for a callsign.
-       It must be three or more letters and digits only. Callsign may be
-       terminated by a "/" followed by one or more letters and digits.
-       Examples: "K0RLO", "W1JU" or "K0RLO/R1", "W1JU/MOBILE"
-""".format(callsign))
-    else:
-        if not re.fullmatch(r'[A-Z0-9]{3,}', callsign):
-            #
-            #If an error is found, report it
-            #
-            return("""
-Error: "{}" is not a valid format for a callsign. It must be three or
-       more letters and digits only. It may NOT contain a "/"!
-       Examples: "K0RLO" or "W1JU"
-""".format(callsign))
-
-    #
-    #It's a correctly formatted callsign, return false.
-    #
-    return("")
-
-########################################################################
-########################################################################
-#
-# ADIF and ADX support variables and functions
-#
-########################################################################
-########################################################################
-
-cr = "\r"
-lf = "\n"
-crlf = cr + lf
-crlf_re = r'\r\n'
-cr_or_lf_re = r'[\r\n]'
-onlycr_re = r'\r[^\n]'
-onlylf_re = r'[^\r]\n'
-end_of_header = "<EOH>"
-end_of_record = "<EOR>"
-
-#
-#XML information for ADX support
-#
-adx_first_line = '<?xml version="1.0" encoding="UTF-8"?>'
-adx_adx     = "<ADX>"
-adx_header  = "    <HEADER>"
-adx_records = "    <RECORDS>"
-adx_record  = "        <RECORD>"
 
 Ant_Path_Enumeration = {
     "G" : "grayline",
@@ -785,89 +515,90 @@ Ant_Path_Enumeration = {
     }
 
 ARRL_Section_Enumeration = {
-    "AL" : ("ALABAMA", ("291",)),
-    "AK" : ("ALASKA", ("6",)),
-    "AB" : ("ALBERTA", ("1",)),
-    "AR" : ("ARKANSAS", ("291",)),
-    "AZ" : ("ARIZONA", ("291",)),
-    "BC" : ("BRITISH COLUMBIA", ("1",)),
-    "CO" : ("COLORADO", ("291",)),
-    "CT" : ("CONNECTICUT", ("291",)),
-    "DE" : ("DELAWARE", ("291",)),
-    "EB" : ("EAST BAY", ("291",)),
-    "EMA" : ("EASTERN MASSACHUSETTS", ("291",)),
-    "ENY" : ("EASTERN NEW YORK", ("291",)),
-    "EPA" : ("EASTERN PENNSYLVANIA", ("291",)),
-    "EWA" : ("EASTERN WASHINGTON", ("291",)),
-    "GA" : ("GEORGIA", ("291",)),
-    "GTA" : ("GREATER TORONTO AREA", ("1",)),
-    "ID" : ("IDAHO", ("291",)),
-    "IL" : ("ILLINOIS", ("291",)),
-    "IN" : ("INDIANA", ("291",)),
-    "IA" : ("IOWA", ("291",)),
-    "KS" : ("KANSAS", ("291",)),
-    "KY" : ("KENTUCKY", ("291",)),
-    "LAX" : ("LOS ANGELES", ("291",)),
-    "LA" : ("LOUISIANA", ("291",)),
-    "ME" : ("MAINE", ("291",)),
-    "MB" : ("MANITOBA", ("1",)),
-    "MAR" : ("MARITIME", ("1",)),
-    "MDC" : ("MARYLAND-DC", ("291",)),
-    "MI" : ("MICHIGAN", ("291",)),
-    "MN" : ("MINNESOTA", ("291",)),
-    "MS" : ("MISSISSIPPI", ("291",)),
-    "MO" : ("MISSOURI", ("291",)),
-    "MT" : ("MONTANA", ("291",)),
-    "NE" : ("NEBRASKA", ("291",)),
-    "NV" : ("NEVADA", ("291",)),
-    "NH" : ("NEW HAMPSHIRE", ("291",)),
-    "NM" : ("NEW MEXICO", ("291",)),
-    "NLI" : ("NEW YORK CITY-LONG ISLAND", ("291",)),
-    "NL" : ("NEWFOUNDLAND/LABRADOR", ("1",)),
-    "NC" : ("NORTH CAROLINA", ("291",)),
-    "ND" : ("NORTH DAKOTA", ("291",)),
-    "NTX" : ("NORTH TEXAS", ("291",)),
-    "NFL" : ("NORTHERN FLORIDA", ("291",)),
-    "NNJ" : ("NORTHERN NEW JERSEY", ("291",)),
-    "NNY" : ("NORTHERN NEW YORK", ("291",)),
-    "NT" : ("NORTHWEST TERRITORIES/YUKON/NUNAVUT", ("1",)),
-    "OH" : ("OHIO", ("291",)),
-    "OK" : ("OKLAHOMA", ("291",)),
-    "ONE" : ("ONTARIO EAST", ("1",)),
-    "ONN" : ("ONTARIO NORTH", ("1",)),
-    "ONS" : ("ONTARIO SOUTH", ("1",)),
-    "ORG" : ("ORANGE", ("291",)),
-    "OR" : ("OREGON", ("291",)),
-    "PAC" : ("PACIFIC", ("9", "20", "103", "110", "123", "134", "138", "166", "174", "197", "297", "515")),
-    "PR" : ("PUERTO RICO", ("43", "202",)),
-    "QC" : ("QUEBEC", ("1",)),
-    "RI" : ("RHODE ISLAND", ("291",)),
-    "SV" : ("SACRAMENTO VALLEY", ("291",)),
-    "SDG" : ("SAN DIEGO", ("291",)),
-    "SF" : ("SAN FRANCISCO", ("291",)),
-    "SJV" : ("SAN JOAQUIN VALLEY", ("291",)),
-    "SB" : ("SANTA BARBARA", ("291",)),
-    "SCV" : ("SANTA CLARA VALLEY", ("291",)),
-    "SK" : ("SASKATCHEWAN", ("1",)),
-    "SC" : ("SOUTH CAROLINA", ("291",)),
-    "SD" : ("SOUTH DAKOTA", ("291",)),
-    "STX" : ("SOUTH TEXAS", ("291",)),
-    "SFL" : ("SOUTHERN FLORIDA", ("291",)),
-    "SNJ" : ("SOUTHERN NEW JERSEY", ("291",)),
-    "TN" : ("TENNESSEE", ("291",)),
-    "VI" : ("US VIRGIN ISLANDS", ("105", "182", "285")),
-    "UT" : ("UTAH", ("291",)),
-    "VT" : ("VERMONT", ("291",)),
-    "VA" : ("VIRGINIA", ("291",)),
-    "WCF" : ("WEST CENTRAL FLORIDA", ("291",)),
-    "WTX" : ("WEST TEXAS", ("291",)),
-    "WV" : ("WEST VIRGINIA", ("291",)),
-    "WMA" : ("WESTERN MASSACHUSETTS", ("291",)),
-    "WNY" : ("WESTERN NEW YORK", ("291",)),
-    "WPA" : ("WESTERN PENNSYLVANIA", ("291",)),
-    "WWA" : ("WESTERN WASHINGTON", ("291",)),
-    "WI" : ("WISCONSIN", ("291",)),
-    "WY" : ("WYOMING", ("291",))
+    "AL" : ("Alabama", ("291",)),
+    "AK" : ("Alaska", ("6",)),
+    "AB" : ("Alberta", ("1",)),
+    "AR" : ("Arkansas", ("291",)),
+    "AZ" : ("Arizona", ("291",)),
+    "BC" : ("British Columbia", ("1",)),
+    "CO" : ("Colorado", ("291",)),
+    "CT" : ("Connecticut", ("291",)),
+    "DE" : ("Delaware", ("291",)),
+    "EB" : ("East Bay", ("291",)),
+    "EMA" : ("Eastern Massachusetts", ("291",)),
+    "ENY" : ("Eastern New York", ("291",)),
+    "EPA" : ("Eastern Pennsylvania", ("291",)),
+    "EWA" : ("Eastern Washington", ("291",)),
+    "GA" : ("Georgia", ("291",)),
+    "GTA" : ("Greater Toronto Area", ("1",)),
+    "ID" : ("Idaho", ("291",)),
+    "IL" : ("Illinois", ("291",)),
+    "IN" : ("Indiana", ("291",)),
+    "IA" : ("Iowa", ("291",)),
+    "KS" : ("Kansas", ("291",)),
+    "KY" : ("Kentucky", ("291",)),
+    "LAX" : ("Los Angeles", ("291",)),
+    "LA" : ("Louisiana", ("291",)),
+    "ME" : ("Maine", ("291",)),
+    "MB" : ("Manitoba", ("1",)),
+    "MAR" : ("Maritime", ("1",)),
+    "MDC" : ("Maryland-DC", ("291",)),
+    "MI" : ("Michigan", ("291",)),
+    "MN" : ("Minnesota", ("291",)),
+    "MS" : ("Mississippi", ("291",)),
+    "MO" : ("Missouri", ("291",)),
+    "MT" : ("Montana", ("291",)),
+    "NE" : ("Nebraska", ("291",)),
+    "NV" : ("Nevada", ("291",)),
+    "NH" : ("New Hampshire", ("291",)),
+    "NM" : ("New Mexico", ("291",)),
+    "NLI" : ("New York City-Long Island", ("291",)),
+    "NL" : ("Newfoundland/Labrador", ("1",)),
+    "NC" : ("North Carolina", ("291",)),
+    "ND" : ("North Dakota", ("291",)),
+    "NTX" : ("North Texas", ("291",)),
+    "NFL" : ("Northern Florida", ("291",)),
+    "NNJ" : ("Northern New Jersey", ("291",)),
+    "NNY" : ("Northern New York", ("291",)),
+    "NT" : ("Northwest Territories/Yukon/Nunavut", ("1",)),
+    "OH" : ("Ohio", ("291",)),
+    "OK" : ("Oklahoma", ("291",)),
+    "ONE" : ("Ontario East", ("1",)),
+    "ONN" : ("Ontario North", ("1",)),
+    "ONS" : ("Ontario South", ("1",)),
+    "ORG" : ("Orange", ("291",)),
+    "OR" : ("Oregon", ("291",)),
+    "PAC" : ("Pacific", ("9", "20", "103", "110", "123", "134", "138", "166", "174", "197", "297", "515")),
+    "PR" : ("Puerto Rico", ("43", "202",)),
+    "QC" : ("Quebec", ("1",)),
+    "RI" : ("Rhode Island", ("291",)),
+    "SV" : ("Sacramento Valley", ("291",)),
+    "SDG" : ("San Diego", ("291",)),
+    "SF" : ("San Francisco", ("291",)),
+    "SJV" : ("San Joaquin Valley", ("291",)),
+    "SB" : ("Santa Barbara", ("291",)),
+    "SCV" : ("Santa Clara Valley", ("291",)),
+    "SK" : ("Saskatchewan", ("1",)),
+    "SC" : ("South Carolina", ("291",)),
+    "SD" : ("South Dakota", ("291",)),
+    "STX" : ("South Texas", ("291",)),
+    "SFL" : ("Southern Florida", ("291",)),
+    "SNJ" : ("Southern New Jersey", ("291",)),
+    "TN" : ("Tennessee", ("291",)),
+    "VI" : ("US Virgin Islands", ("105", "182", "285")),
+    "UT" : ("Utah", ("291",)),
+    "VT" : ("Vermont", ("291",)),
+    "VA" : ("Virginia", ("291",)),
+    "WCF" : ("West Central Florida", ("291",)),
+    "WTX" : ("West Texas", ("291",)),
+    "WV" : ("West Virginia", ("291",)),
+    "WMA" : ("Western Massachusetts", ("291",)),
+    "WNY" : ("Western New York", ("291",)),
+    "WPA" : ("Western Pennsylvania", ("291",)),
+    "WWA" : ("Western Washington", ("291",)),
+    "WI" : ("Wisconsin", ("291",)),
+    "WY" : ("Wyoming", ("291",))
+
     }
 
 Award_Ennumeration = (
@@ -1253,6 +984,9 @@ Credit_Ennumeration = {
     "WITUZ_BAND" : ("RSGB", "Worked ITU Zones (WITUZ)", "Band")
     }
 
+#
+#Table of valid submodes for each mode, if any
+#
 Mode_Enumeration = {
     "AM" : (),
     "ARDOP" : (),
@@ -1262,28 +996,48 @@ Mode_Enumeration = {
     "CONTESTI" : (),
     "CW" : ("PCW",),
     "DIGITALVOICE" : ("C4FM", "DMR", "DSTAR"),
-    "DOMINO" : ("DOM-M", "DOM4", "DOM5", "DOM8", "DOM11", "DOM16", "DOM22", "DOM44", "DOM88", "DOMINOEX", "DOMINOF"),
-    "DYNAMIC" : ("VARA HF", "VARA SATELLITE", "VARA FM 1200", "VARA FM 9600"),
+    "DOMINO" : ("DOM-M", "DOM4", "DOM5", "DOM8", "DOM11", "DOM16",
+        "DOM22", "DOM44", "DOM88", "DOMINOEX", "DOMINOF"),
+    "DYNAMIC" : ("VARA HF", "VARA SATELLITE", "VARA FM 1200",
+        "VARA FM 9600"),
     "FAX" : (),
     "FM" : (),
     "FSK441" : (),
     "FT8" : (),
-    "HELL" : ("FMHELL", "FSKHELL", "HELL80", "HELLX5", "HELLX9", "HFSK", "PSKHELL", "SLOWHELL"),
+    "HELL" : ("FMHELL", "FSKHELL", "HELL80", "HELLX5", "HELLX9", "HFSK",
+        "PSKHELL", "SLOWHELL"),
     "ISCAT" : ("ISCAT-A", "ISCAT-B"),
     "JT4" : ("JT4A", "JT4B", "JT4C", "JT4D", "JT4E", "JT4F", "JT4G"),
     "JT6M" : (),
-    "JT9" : ("JT9-1", "JT9-2", "JT9-5", "JT9-10", "JT9-30", "JT9A", "JT9B", "JT9C", "JT9D", "JT9E", "JT9E FAST", "JT9F", "JT9F FAST", "JT9G", "JT9G FAST", "JT9H", "JT9H FAST"),
+    "JT9" : ("JT9-1", "JT9-2", "JT9-5", "JT9-10", "JT9-30", "JT9A",
+        "JT9B", "JT9C", "JT9D", "JT9E", "JT9E FAST", "JT9F",
+        "JT9F FAST", "JT9G", "JT9G FAST", "JT9H", "JT9H FAST"),
     "JT44" : (),
     "JT65" : ("JT65A", "JT65B", "JT65B2", "JT65C", "JT65C2"),
-    "MFSK" : ("FSQCALL", "FST4", "FST4W", "FT4", "JS8", "JTMS", "MFSK4", "MFSK8", "MFSK11", "MFSK16", "MFSK22", "MFSK31", "MFSK32", "MFSK64", "MFSK64L", "MFSK128 MFSK128L", "Q65"),
+    "MFSK" : ("FSQCALL", "FST4", "FST4W", "FT4", "JS8", "JTMS", "MFSK4",
+        "MFSK8", "MFSK11", "MFSK16", "MFSK22", "MFSK31", "MFSK32",
+        "MFSK64", "MFSK64L", "MFSK128 MFSK128L", "Q65"),
     "MSK144" : (),
     "MT63" : (),
-    "OLIVIA" : ("OLIVIA 4/125", "OLIVIA 4/250", "OLIVIA 8/250", "OLIVIA 8/500", "OLIVIA 16/500", "OLIVIA 16/1000", "OLIVIA 32/1000"),
+    "OLIVIA" : ("OLIVIA 4/125", "OLIVIA 4/250", "OLIVIA 8/250",
+        "OLIVIA 8/500", "OLIVIA 16/500", "OLIVIA 16/1000",
+        "OLIVIA 32/1000"),
     "OPERA" : ("OPERA-BEACON", "OPERA-QSO"),
     "PAC" : ("PAC2", "PAC3", "PAC4"),
     "PAX" : ("PAX2"),
     "PKT" : (),
-    "PSK" : ("8PSK125", "8PSK125F", "8PSK125FL", "8PSK250", "8PSK250F", "8PSK250FL", "8PSK500", "8PSK500F", "8PSK1000", "8PSK1000F", "8PSK1200F", "FSK31", "PSK10", "PSK31", "PSK63", "PSK63F", "PSK63RC4", "PSK63RC5", "PSK63RC10", "PSK63RC20", "PSK63RC32", "PSK125", "PSK125C12", "PSK125R", "PSK125RC10", "PSK125RC12", "PSK125RC16", "PSK125RC4", "PSK125RC5", "PSK250", "PSK250C6", "PSK250R", "PSK250RC2", "PSK250RC3", "PSK250RC5", "PSK250RC6", "PSK250RC7", "PSK500", "PSK500C2", "PSK500C4", "PSK500R", "PSK500RC2", "PSK500RC3", "PSK500RC4", "PSK800C2", "PSK800RC2", "PSK1000", "PSK1000C2", "PSK1000R", "PSK1000RC2", "PSKAM10", "PSKAM31", "PSKAM50", "PSKFEC31", "QPSK31", "QPSK63", "QPSK125", "QPSK250", "QPSK500", "SIM31"),
+    "PSK" : ("8PSK125", "8PSK125F", "8PSK125FL", "8PSK250", "8PSK250F",
+        "8PSK250FL", "8PSK500", "8PSK500F", "8PSK1000", "8PSK1000F",
+        "8PSK1200F", "FSK31", "PSK10", "PSK31", "PSK63", "PSK63F",
+        "PSK63RC4", "PSK63RC5", "PSK63RC10", "PSK63RC20", "PSK63RC32",
+        "PSK125", "PSK125C12", "PSK125R", "PSK125RC10", "PSK125RC12",
+        "PSK125RC16", "PSK125RC4", "PSK125RC5", "PSK250", "PSK250C6",
+        "PSK250R", "PSK250RC2", "PSK250RC3", "PSK250RC5", "PSK250RC6",
+        "PSK250RC7", "PSK500", "PSK500C2", "PSK500C4", "PSK500R",
+        "PSK500RC2", "PSK500RC3", "PSK500RC4", "PSK800C2", "PSK800RC2",
+        "PSK1000", "PSK1000C2", "PSK1000R", "PSK1000RC2", "PSKAM10",
+        "PSKAM31", "PSKAM50", "PSKFEC31", "QPSK31", "QPSK63", "QPSK125",
+        "QPSK250", "QPSK500", "SIM31"),
     "PSK2K" : (),
     "Q15" : (),
     "QRA64" : ("QRA64A", "QRA64B", "QRA64C", "QRA64D", "QRA64E"),
@@ -1293,8 +1047,10 @@ Mode_Enumeration = {
     "SSB" : ("LSB", "USB"),
     "SSTV" : (),
     "T10" : (),
-    "THOR" : ("THOR-M", "THOR4", "THOR5", "THOR8", "THOR11", "THOR16", "THOR22", "THOR25X4", "THOR50X1", "THOR50X2", "THOR100"),
-    "THRB" : ("THRBX", "THRBX1", "THRBX2", "THRBX4", "THROB1", "THROB2", "THROB4"),
+    "THOR" : ("THOR-M", "THOR4", "THOR5", "THOR8", "THOR11", "THOR16",
+        "THOR22", "THOR25X4", "THOR50X1", "THOR50X2", "THOR100"),
+    "THRB" : ("THRBX", "THRBX1", "THRBX2", "THRBX4", "THROB1", "THROB2",
+        "THROB4"),
     "TOR" : ("AMTORFEC", "GTOR", "NAVTEX", "SITORB"),
     "V4" : (),
     "VOI" : (),
@@ -1303,7 +1059,7 @@ Mode_Enumeration = {
     }
 
 #
-#Create submode enumeration table from mode enumeration table
+#Table of valid modes for each submode. Created from the mode table.
 #
 Submode_Enumeration = {}
 for mode in Mode_Enumeration:
@@ -4934,39 +4690,6 @@ def WWFFRef(test):
     characters (A-Z, 0-9) and nnnn is "0000" - "9999".
 """.format(test))
 
-#
-#Valid data types which contain the function to verify the data
-#types [0] and the data type indicator [1]. Data type indicator is None
-#if no data type indicator.
-#
-
-data_types = {
-    "AwardList" : (None, AwardList),
-    "CreditList" : (None, CreditList),
-    "SponsoredAwardList" : (None, SponsoredAwardList),
-    "Boolean" : ("B", Boolean),
-    "Digit" : (None, Digit),
-    "Integer" : (None, Integer),
-    "Number" : ("N", Number),
-    "PositiveInteger" : (None, PositiveInteger),
-    "Character" : (None, Character),
-    "IntlCharacter" : (None, TBS),
-    "Date" : ("D", Date),
-    "Time" : ("T", Time),
-    "IOTARefNo" : (None, TBS),
-    "String" : ("S", String),
-    "IntlString" : ("I", TBS),
-    "MultilineString" : ("M", MultilineString),
-    "IntlMultilineString" : ("G", TBS),
-    "Enumeration" : ("E", None),
-    "GridSquare" : (None, GridSquare),
-    "GridSquareList" : (None, GridSquareList),
-    "Location" : ("L", Location),
-    "SecondarySubdivisionList" : (None, TBS),
-    "SOTARef" : (None, TBS),
-    "WWFFRef" : (None, WWFFRef)
-    }
-
 ########################################################################
 ########################################################################
 #
@@ -4975,6 +4698,39 @@ data_types = {
 #
 ########################################################################
 ########################################################################
+
+#
+#Valid data types which contain the function to verify the data
+#types [0] and the data type indicator [1]. Data type indicator is None
+#if no data type indicator.
+#
+
+data_types = {
+    "AwardList" : ("", AwardList),
+    "CreditList" : ("", CreditList),
+    "SponsoredAwardList" : ("", SponsoredAwardList),
+    "Boolean" : ("B", Boolean),
+    "Digit" : ("", Digit),
+    "Integer" : ("", Integer),
+    "Number" : ("N", Number),
+    "PositiveInteger" : ("", PositiveInteger),
+    "Character" : ("", Character),
+    "IntlCharacter" : ("", TBS),
+    "Date" : ("D", Date),
+    "Time" : ("T", Time),
+    "IOTARefNo" : ("", TBS),
+    "String" : ("S", String),
+    "IntlString" : ("I", TBS),
+    "MultilineString" : ("M", MultilineString),
+    "IntlMultilineString" : ("G", TBS),
+    "Enumeration" : ("E", None),
+    "GridSquare" : ("", GridSquare),
+    "GridSquareList" : ("", GridSquareList),
+    "Location" : ("L", Location),
+    "SecondarySubdivisionList" : ("", TBS),
+    "SOTARef" : ("", TBS),
+    "WWFFRef" : ("", WWFFRef)
+    }
 
 header_fields = {
     "ADIF_VER" : ("String",),
@@ -5153,28 +4909,28 @@ xml_subset_record_fields = {
 #Create text strings as keys to the tables and to allow hashing into
 #them.
 #
-ADI_header = "ADI header"
-ADI_record = "ADI record"
-XML_header = "XML header"
-XML_record = "XML record"
+ADIF_header_fields = "ADIF header"
+ADIF_record_fields = "ADIF record"
+XML_header_fields = "XML header"
+XML_record_fields = "XML record"
 
 #
-#Valid tag dictonaries, split out ADI and XML
+#Valid field dictonaries, split out ADIF and XML
 #
-valid_adi_tag_tables = {
-    ADI_header : header_fields,
-    ADI_record : record_fields,
+valid_adif_field_tables = {
+    ADIF_header_fields : header_fields,
+    ADIF_record_fields : record_fields,
     }
 
-valid_xml_tag_tables = {
-    XML_header : header_fields,
-    XML_record : {**record_fields, **xml_subset_record_fields},
+valid_xml_field_tables = {
+    XML_header_fields : header_fields,
+    XML_record_fields : {**record_fields, **xml_subset_record_fields},
     }
 
 #
-#Build up full list of valid tag tables from the ADI and XML tables
+#Build up full list of valid field tables from the ADIF and XML tables
 #
-valid_tag_tables = {**valid_adi_tag_tables, **valid_xml_tag_tables}
+valid_field_tables = {**valid_adif_field_tables, **valid_xml_field_tables}
 
 #
 #USERDEFn is a special case
@@ -5199,92 +4955,509 @@ def userdef(test):
 
     return("")
 
-def tag(tag_name, tag_contents, include_data_type=None):
+def dictonary_duplicates(dictonary):
     """
-    Convert a tag name and contents to a correctly formatted ADIF tag
-    format "<TAG_NAME:LENGTH_OF_CONTENTS>CONTENTS"
+    Verify that there are not any duplicate keys that differ only in
+    character case.
 
     Arguments:
-        tag_name:       Name of the tag
-        tag_contents:   Contents of tag
+        dictonary:
+            The dictonary of fields to validate
 
     Returns:
-        Correctly formatted ADIF tag with a blank at the end
+        "" if no conflicts found
+        Error text if conflicts found.
     """
 
     validate_arg_type((
-        (tag_name, str),
-        (tag_contents, str),
-        (include_data_type, None, str),
+        (dictonary, dict),
     ))
 
     #
-    #See if data type to be included in tag
+    #Make a dictonary of all uppercase keys with empty lists
     #
-    if include_data_type:
-        return("<{}:{}:{}>{}".format(tag_name,
-            len(tag_contents),
-            include_data_type,
-            tag_contents))
+    upcase_dict = {}
+    for i in dictonary:
+        upcase_dict[i.upper()] = []
 
     #
-    #Data type not included, return the correctly formatted tag.
+    #Now store all keys cooresponding to that uppercse key in the
+    #dictonary
     #
-    return("<{}:{}>{}".format(tag_name,
-                            len(tag_contents),
-                            tag_contents))
+    for i in dictonary:
+        upcase_dict[i.upper()].append(i)
 
-def validate_tag(tag_type, tag_name, tag_contents):
+    #
+    #At this point every key should have one and only one entry in its
+    #list. More than one means we have multiple keys that map to the
+    #same uppercase key, for example: foo, foO, fOo, fOO, Foo, FoO, FOo
+    #and FOO makes eight.
+    #
+    errors = ""
+    for i in sorted(upcase_dict):
+        #
+        #See if more than one entry
+        #
+        if len(upcase_dict[i]) > 1:
+            #
+            #We've got an error
+            #
+            errors += """
+    Field conflict due to character case. The following field names are
+    duplicates, differing only by character case:
+        "{}"
+""".format('", "'.join(sorted(upcase_dict[i])))
+
+    #
+    #Returns errors if any found or null string if no errors.
+    #
+    return(errors)
+
+def get_dti(dti):
     """
-    Make sure specified header tag is a valid fiend and it's contents
+    Return character (or null string) that identifies the data type
+
+    Arguments:
+        dti:
+            Contains the data type string if anything but an enumerated
+            type, or a callable routine if an enumerated type.
+
+    Returns:
+        One character data type or null string if no data type
+        cooresponds to this data type.
+    """
+
+    validate_arg_type((
+        (dti, str, type(get_dti)),
+    ))
+
+    if callable(dti):
+        return("E")
+    else:
+        return(data_types[dti][0])
+        
+########################################################################
+########################################################################
+#
+# Validation code that assures tables, etc. that can be checked are
+# correctly structured
+#
+########################################################################
+########################################################################
+
+#
+#Start with no library errors
+#
+lib_errors = ""
+
+#
+#All header and QSO fields' data types should be found in the data types
+#table (or, in the case of the enumeration types, there should be a
+#callable routine). Assure one or the other exists.
+#
+#We use the table's names (strings) for error reporting reasons, see the
+#error message at the bottom of the loop which uses the string in the
+#error message.
+#
+for table in ("header_fields",
+        "record_fields", "xml_subset_record_fields"):
+    for key, value in eval(table).items():
+        #
+        #The value should be a tuple of ADIF data types OR a callable
+        #function if the data type is ennumerated.
+        #
+        if callable(value):
+            #
+            #It's a callable function (Enumeration), that's a valid
+            #option, we're done checking
+            #
+            continue
+
+        if isinstance(value, tuple):
+            #
+            #It's a tuple of one or more data types. Check that all data
+            #types are valid
+            #
+            for dt in value:
+                #
+                #for each data type, make sure it exists
+                #
+                if dt not in data_types:
+                    lib_errors += """
+SevereError: In hamlib.py, {0} field "{1}" has
+             a data type of "{2}" which is NOT in the
+             data_types dictonary. Either correct the
+             {0} "{1}" field datatype or add "{2}"
+             to the data_types dictonary.
+""".format(table, key, dt)
+
+#
+#If we found any errors, exit
+#
+if lib_errors:
+    print(lib_errors)
+    sys.exit(1)
+
+########################################################################
+########################################################################
+#
+# Callable user interface functions
+#
+########################################################################
+########################################################################
+
+def get_input(prompt_help, prompt, default=None, can_exit=True):
+    """
+    Get input string from console.
+
+    If "HELP" is typed, print <script_name>.help file, if one exists.
+    If "EXIT" is typed and "can_exit" is True, exit the program.
+        Otherwise print message that the program cannot be exited and
+        reprint the prompt.
+    If "?" is typed, print specific help text for this question, if it
+        was supplied (suggestion: supply it!)
+    If nothing is typed (null string, "") and default is None, do the
+        same thing as "?". Otherwide return the default string so the
+        calling function can use it as if it was typed in.
+
+    If none of the above, strip off leading and trailing blanks and
+        pass the string back to the calling function.
+
+    Arguments:
+        prompt_help:
+            Text to print if help on this prompt is requested.
+        prompt:
+            String to print as question prompt.
+        default: Default None
+            None:
+                No default answer, print prompt help, then print prompt
+                again if just <Enter> ("") is pressed.
+            string:
+                String to return if just <Enter> ("") is pressed.
+        can_exit: Default True
+            True:
+                Exit the program if "EXIT" is typed.
+            False:
+                Print message that the program cannot be exited print
+                the prompt again.
+    Returns:
+        Input string to calling function.
+    """
+
+    validate_arg_type((
+        (prompt_help, str),
+        (prompt, str),
+        (default, str, None),
+        (can_exit, bool),
+    ))
+
+    while(True):
+        #
+        #Get input, strip blanks
+        #
+        text = str(input(prompt)).strip()
+
+        #
+        #If a default is specified and nothing entered (""), return
+        #default string.
+        #
+        if (default is not None) and (not text):
+            return(default)
+
+        #
+        #If help is  requested, display entire program help
+        #
+        if text.upper() == "HELP":
+            print(script_help)
+            continue
+
+        #
+        #If we can exit at this point and "EXIT" entered, exit
+        #
+        if text.upper() == "EXIT":
+            if can_exit:
+                sys.exit(0)
+            else:
+                print("Cannot exit at this point.\n\n")
+                continue
+
+        #
+        #If input is "?" or just <Enter> (null string - ""), print
+        #prompt help text if itexists.
+        #
+        if (text == "?") or (not text):
+            print("""
+Type "EXIT" to exit logger.
+Type "?" for this help.
+""" + prompt_help + """
+Type "HELP" for more information.
+""")
+            continue
+
+        break
+
+    #
+    #Return the text from the console
+    #
+    return(text)
+
+
+def get_yes_no(prompt_help, prompt, default="Y", can_exit=True):
+    """
+    Print prompt that requires a Y or N answer.
+
+    Arguments:
+        help:
+            Text to print if help on this prompt is requested.
+        prompt_help:
+            String to print as question prompt NOT including Y/N portion
+            of prompt.
+        default: Default "Y"
+            None:
+                No default answer, the user MUST answer "Y" or "N".
+            string:
+                "Y":
+                    Deafult answer to the question is "Yes".
+                "N":
+                    Deafult answer to the question is "No".
+        can_exit: Default True
+            True:
+                Exit the program if "EXIT" is typed.
+            False:
+                Print message that the program cannot be exited print
+                the prompt again.
+
+    Returns:
+        True if Yes
+        False if No
+    """
+
+    validate_arg_type((
+        (prompt_help, str),
+        (prompt, str),
+        (default, str, None),
+        (can_exit, bool),
+    ))
+
+    #
+    #Make the default for no default yes/no answer something the user
+    #can't possibly type by accident!
+    #
+    no_default_yes_no_answer = "XX_NO_DEFAULT_YES_NO_ANSWER_XX"
+
+    default_prompt = {
+        "Y" : " [(Y), n]: ",
+        "N" : " [(N), y]: ",
+        no_default_yes_no_answer : " [y, n]: "
+        }
+
+    if default is None:
+        default = no_default_yes_no_answer
+    else:
+        default = default[:1].upper()
+
+    #
+    #Runtime programming check: Make sure "Y", "N" or None was supplied
+    #as a default. If this fails, the program immediately exits.
+    #
+    if default not in default_prompt:
+        print("""
+SeverError: Default supplied for get_yes_no was "{}".
+            It must be "Y", "N" or None.
+""".format(default)
+    + generate_stack_trace(2))
+        sys.exit(1)
+
+    #
+    #Keep trying until you get a "Y", "N" or
+    #"XX_NO_DEFAULT_YES_NO_ANSWER_XX" (if no default and the user types
+    #just <ENTER>).
+    #
+    while(True):
+        #
+        #Ask the question and get an upcased response.
+        #
+        answer = get_input(prompt_help,
+            prompt.rstrip() + default_prompt[default],
+            default=default,
+            can_exit=can_exit).upper()
+
+        #
+        #At this point we have input. Let's hope it's a "Y" or "N" after
+        #we reduce it to the first character. Note that if there's no
+        #default, the string ("XX_NO_DEFAULT_YES_NO_ANSWER_XX"") starts
+        #with an "X" and once reduced to one character it won't match
+        #anything in the default_prompt dictonary, causing an error to
+        #be printed and the prompt displayed again.
+        #
+
+        #
+        #Reduce answer to first character
+        #
+        answer = answer[:1]
+
+        #
+        #If valid response, return True if "Y", False if "N".
+        #
+        if answer in default_prompt:
+            return(answer == "Y")
+
+        #
+        #Invalid response, report error and ask again.
+        #
+        if default == no_default_yes_no_answer:
+            print("""
+Error: First character of answer must be 'Y' or 'N', there is no
+       default.
+""")
+        else:
+            print("""
+Error: First character of answer must be 'Y' or 'N' or <Enter> to use
+       the default of "{}".
+""".format(default))
+
+def valid_callsign(callsign, slash=False):
+    """
+    Validate the callsign against the expected format - at least the
+    best we can given the lack of a hard standard... :)
+
+    Arguments:
+        callsign:
+            String containing callsign.
+        slash: Default False
+            True:
+                Slash is allowed in the callsign name.
+            False:
+                Slash will generate an "Invalid callsign" error.
+
+    Returns:
+        Valid callsign:
+            Null string ("")
+        Invalid callsign:
+            Error string.
+    """
+    
+    validate_arg_type((
+        (callsign, str),
+        (slash, bool)
+    ))
+
+    if slash:
+        if not re.fullmatch(r'[A-Z0-9]{3,}(/[A-Z0-9]+|$)', callsign):
+            #
+            #If an error is found, report it
+            #
+            return("""
+Error: "{}" is not a valid format for a callsign.
+       It must be three or more letters and digits only. Callsign may be
+       terminated by a "/" followed by one or more letters and digits.
+       Examples: "K0RLO", "W1JU" or "K0RLO/R1", "W1JU/MOBILE"
+""".format(callsign))
+    else:
+        if not re.fullmatch(r'[A-Z0-9]{3,}', callsign):
+            #
+            #If an error is found, report it
+            #
+            return("""
+Error: "{}" is not a valid format for a callsign. It must be three or
+       more letters and digits only. It may NOT contain a "/"!
+       Examples: "K0RLO" or "W1JU"
+""".format(callsign))
+
+    #
+    #It's a correctly formatted callsign, return false.
+    #
+    return("")
+
+def field(field_name, field_contents, data_type_indicator=""):
+    """
+    Convert a field name and contents to a correctly formatted ADIF field
+    format "<FIELD_NAME:LENGTH_OF_CONTENTS>CONTENTS"
+
+    Arguments:
+        field_name:
+            Name of the field
+        field_contents:
+            Contents of field
+        data_type_indicator:
+            Character of data type if to be included in the field, None
+            otherwise.
+
+    Returns:
+        Correctly formatted ADIF field
+    """
+
+    validate_arg_type((
+        (field_name, str),
+        (field_contents, str),
+        (data_type_indicator, str),
+    ))
+
+    #
+    #See if data type to be included in field
+    #
+    if data_type_indicator:
+        data_type_indicator = ":" + data_type_indicator
+
+    #
+    #Return the correctly formatted field.
+    #
+    return("<{}:{}{}>{}".format(field_name,
+                            len(field_contents),
+                            data_type_indicator,
+                            field_contents))
+
+def validate_field(field_type, field_name, field_contents):
+    """
+    Make sure specified header field is a valid fiend and it's contents
     are valid.
 
     Arguments:
-        tag_definitions:
-            Contains tag type in text. Valid options are "ADI header",
-            "ADI record", "XML header" or "XML record".
-        tag_name:
-            Name of the tag
-        tag_contents:
-            Contents of tag
+        field_definitions:
+            Contains field type in text. Valid options are "ADIF header",
+            "ADIF record", "XML header" or "XML record".
+        field_name:
+            Name of the field
+        field_contents:
+            Contents of field
 
     Returns:
-        Tag and contents valid:
+        Field and contents valid:
             Null string ("")
-        Tag or contents invalid:
+        Field or contents invalid:
             Error string
     """
 
     validate_arg_type((
-        (tag_type, str),
-        (tag_name, str),
-        (tag_contents, str),
+        (field_type, str),
+        (field_name, str),
+        (field_contents, str),
     ))
 
     #
-    #Make sure we passed a valid tag type to this function
+    #Make sure we passed a valid field type to this function
     #
-    if tag_type not in valid_tag_tables:
+    if field_type not in valid_field_tables:
         print("""
-SevereError: Tag type of "{}" passed to validate_tag, but it must be one
+SevereError: Field type of "{}" passed to validate_field, but it must be one
              of the following:
              "{}"
-""".format(tag_type, '", "'.join(valid_tag_tables)) + generate_stack_trace())
+""".format(field_type, '", "'.join(valid_field_tables)) + generate_stack_trace())
         sys.exit(1)
 
     #
-    #Translate tag type to dictionary of valid tags
+    #Translate field type to dictionary of valid fields
     #
-    tag_definitions = valid_tag_tables[tag_type]
+    field_definitions = valid_field_tables[field_type]
 
     #
-    #Make sure tag is a valid header field. If not, report error and
+    #Make sure field is a valid header field. If not, report error and
     #return
     #
-    if tag_name.upper() not in tag_definitions:
+    if field_name.upper() not in field_definitions:
         return("""
-    Tag "{}" is not a valid {} field.
-""".format(tag_name, tag_type))
+    field "{}" is not a valid {} field.
+""".format(field_name, field_type))
 
     #
     #Make sure field contents are valid by calling the field
@@ -5293,49 +5466,57 @@ SevereError: Tag type of "{}" passed to validate_tag, but it must be one
     #We're guaranteed that the validation routine exists becasue of the
     #up-front library checking that happens at the end of this module.
     #
-    errors = eval(tag_definitions[tag_name.upper()])(tag_contents)
+    errors = eval(field_definitions[field_name.upper()])(field_contents)
 
     #
     #If errors, format them
     #
     if errors:
         return("""
-    The "{}" tag's contents are not valid for the following reasons:"
-""".format(tag_name) + errors)
+    The "{}" field's contents are not valid for the following reasons:"
+""".format(field_name) + errors)
 
     return("")
 
-def record(tag_type, tags, include_data_type=False):
+def ADIF_record(fields, spaces=0, include_data_type=False):
     """
-    Convert a dictonary of tags to an ADIF record and return the string.
-    If the list tag_order is given, generate the tags in that order,
-    otherwise generate in sort order.
+    Convert a dictonary of fields to an ADIF record and return the
+    string.
 
     Arguments:
-        tags:       Dictonary of tags and their contents
-        tag_order:  Order to generate tags in
+        fields:
+            Dictonary of fields and their contents.
+        spaces: Default: 0
+            Number of spaces between fields.
+        include_data_type: Default: False
+            If True, include data type in data specifier.
 
     Returns:
         Correctly formatted ADIF record with <EOR>\n at end
     """
 
     validate_arg_type((
-        (tag_type, str),
-        (tags, dict),
+        (fields, dict),
+        (spaces, int),
         (include_data_type, bool),
     ))
 
     #
-    #Generate tags in requested order
+    #Number of spaces between fields
+    #
+    spaces = spaces * " "
+
+    #
+    #Generate fields in requested order
     #
     adif_record = ""
     errors = ""
-    for tag_name in sorted(tags.keys()):
+    for field_name,field_value in sorted(fields.items()):
 
         #
-        #Validate tag and contents
+        #Validate field and contents
         #
-        errors += validate_tag(tag_type, tag_name, tags[tag_name])
+        errors += validate_field(ADIF_record_fields, field_name, field_value)
 
         #
         #If any errors, detected, just continue checking
@@ -5343,27 +5524,120 @@ def record(tag_type, tags, include_data_type=False):
         if errors:
             continue
 
-        if include_data_type:
-            tag_definitions = valid_tag_tables[tag_type]
-            adif_record += tag(tag_name,
-                tags[tag_name],
-                data_types[tag_definitions[tag_name]])
-        else:
-            adif_record += tag(tag_name, tags[tag_name])
+        dti = get_dti(record_fields[field_name]) if include_data_type else ""
+
+        #
+        #Add field to record
+        #
+        adif_record += field(field_name, fields[field_name], dti) + spaces
+
+    #
+    #Validate dictonary and assure that no mixed-case field names cause
+    #duplicates. Note errors is "" if no errors.
+    #
+    errors += dictonary_duplicates(fields)
 
     #
     #See if any errors
     #
     if errors:
         print("""
-SevereError: Errors were found with the following fields:
-""" + errors)
+SevereError: Errors were found with the following {} fields:
+""".format(ADIF_header_fields) + errors)
         sys.exit(1)
 
     #
-    #Return the correctly formatted record with an <EOR> at the end
+    #Return the correctly formatted record with an <EOR> and newline at
+    #the end
     #
-    return(adif_record + "<EOR>")
+    return(adif_record + end_of_record + "\n")
+
+def ADIF_header(fields, header_comment="", include_data_type=False):
+    """
+    Convert a dictonary of fields to an ADIF header and return the
+    string.
+
+    Arguments:
+        fields:
+            Dictonary of fields and their contents.
+        include_data_type: Default: False
+            If True, include data type in data specifier.
+
+    Returns:
+        Correctly formatted ADIF record with <EOR>\n at end
+    """
+
+    validate_arg_type((
+        (fields, dict),
+        (header_comment, str),
+        (include_data_type, bool),
+    ))
+
+    #
+    #Get the current Zulu for header timestamp and generate file comment
+    #
+    zulu = time.gmtime()
+    zdate = time.strftime("%Y-%m-%d", zulu)
+    ztime = time.strftime("%H:%M:%S Zulu", zulu)
+
+    adif_header = "Generated on {} at {} Zulu ".format(zdate, ztime) \
+        + header_comment.strip() + "\n\n"
+
+    #
+    #Set the ADIF version to the version supported by this file unless
+    #the user has defined it.
+    #
+    for i in fields:
+        if i.upper() == ADIF_VERSION_FIELD:
+            break
+    else:
+        fields[ADIF_VERSION_FIELD] = ADIF_VERSION
+
+    #
+    #Generate fields in sorted order
+    #
+    errors = ""
+    for field_name,field_value in sorted(fields.items()):
+
+        #
+        #Validate field and contents
+        #
+        errors += validate_field(ADIF_header_fields, field_name, field_value)
+
+        #
+        #If any errors, detected, just continue checking
+        #
+        if errors:
+            continue
+
+        dti = get_dti(header_fields[field_name])  if include_data_type else ""
+
+        #
+        #Add field to header
+        #
+        adif_header += field(field_name, field_value, dti) + "\n"
+
+    #
+    #Validate dictonary and assure that no mixed-case field names cause
+    #duplicates. Note errors is "" if no errors.
+    #
+    errors += dictonary_duplicates(fields)
+
+    #
+    #See if any errors
+    #
+    if errors:
+        print("""
+SevereError: Errors were found with the following {} fields:
+""".format(ADIF_header_fields) + errors)
+        sys.exit(1)
+
+    #
+    #Return the correctly formatted record with an <EOH> and newline at
+    #the end
+    #
+    return(adif_header + end_of_header + "\n")
+
 
 def freq_to_band(freq):
     """
@@ -5641,65 +5915,4 @@ Error: "{}" is an invalid mode or submode.
    Examples: "CW", "LSB" "SSB USB" or "JT9 JT9H FAST".
 """.format(mode_text))
 
-########################################################################
-########################################################################
-#
-# Validation code that assures tables, etc. that can be checked are
-# correctly structured
-#
-########################################################################
-########################################################################
-
-#
-#Start with no library errors
-#
-lib_errors = ""
-
-#
-#All header and QSO tags' data types should be found in the data types
-#table (or, in the case of the enumeration types, there should be a
-#callable routine). Assure one or the other exists.
-#
-#We make the tables strings for error reporting reasons, see the error
-#message at the bottom of the loop which uses the string in the error
-#message.
-#
-for table in ("header_fields",
-        "record_fields", "xml_subset_record_fields"):
-    for key, value in eval(table).items():
-        #
-        #The value should be a tuple of ADI data types OR a callable
-        #function if the data type is ennumerated.
-        #
-        if callable(value):
-            #
-            #It's a callable function (Enumeration), that's a valid
-            #option, we're done checking
-            #
-            continue
-
-        if isinstance(value, tuple):
-            #
-            #It's a tuple of one or more data types. Check that all data
-            #types are valid
-            #
-            for dt in value:
-                #
-                #for each data type, make sure it exists
-                #
-                if dt not in data_types:
-                    lib_errors += """
-SevereError: In hamlib.py, {0} field "{1}" has
-             a data type of "{2}" which is NOT in the
-             data_types dictonary. Either correct the
-             {0} "{1}" tag datatype or add "{2}"
-             to the data_types dictonary.
-""".format(table, key, dt)
-
-#
-#If we found any errors, exit
-#
-if lib_errors:
-    print(lib_errors)
-    sys.exit(1)
 
