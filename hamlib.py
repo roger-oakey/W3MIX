@@ -13,7 +13,7 @@ import traceback
 #
 
 ADIF_VERSION = "3.1.3"
-ADIF_VERSION_FIELD = "ADIF_VERSION"
+ADIF_VERSION_FIELD = "ADIF_VER"
 
 default_split = r'[,:;\s\t]+'
 helpfile_extension = ".help"
@@ -39,6 +39,15 @@ adx_adx     = "<ADX>"
 adx_header  = "    <HEADER>"
 adx_records = "    <RECORDS>"
 adx_record  = "        <RECORD>"
+
+#
+#Simple hamlib.py exception to be used if error and halt
+#
+class HamlibError(Exception):
+    """
+    Exception for hamlib.py so we generate a stack trace
+    """
+    pass
 
 ########################################################################
 ########################################################################
@@ -205,13 +214,12 @@ def validate_arg_type(args_to_check) -> None:
             return xlate.__name__
         except:
             sys.stderr.write("""
-ArgError: Unable to translate type "{}" to string.""".format(xlate)
-    + generate_stack_trace())
+ArgError: Unable to translate type "{}" to string.""".format(xlate))
 
         #
-        #Don't return, exit
+        #Don't return, throw exception to generate trace
         #
-        sys.exit(1)
+        raise HamlibError("validate_arg_type type translation error")
 
     def process_type(arg_off:int,
                      type_off:int,
@@ -264,13 +272,12 @@ ArgError: Unable to translate type "{}" to string.""".format(xlate)
         #
         sys.stderr.write("""
 ArgError: Element at offset {}, type offset {} is not a type or None.
-""".format(arg_off, type_off)
-    + generate_stack_trace())
+""".format(arg_off, type_off))
 
         #
-        #Don't return, exit
+        #Don't return, throw exception to generate trace
         #
-        sys.exit(1)
+        raise HamlibError("validate_arg_type parameter error")
 
     def process_var_types(arg_off:int, var_and_valid_types) -> None:
         """
@@ -312,9 +319,9 @@ ArgError: Element at offset {} is not a tuple or list. Should be an
     + generate_stack_trace())
 
             #
-            #Don't return, exit
+            #Don't return, throw exception to generate trace
             #
-            sys.exit(1)
+            raise HamlibError("Function argument error")
 
         #
         #If tuple or list has no entries, error
@@ -324,13 +331,12 @@ ArgError: Element at offset {} is not a tuple or list. Should be an
 ArgError: Element at offset {} is an empty tuple or list. Should be an
           tuple or list starting with the function argument followed by
           a list of zero of more valid types for that argument.
-""".format(arg_off)
-    + generate_stack_trace())
+""".format(arg_off))
 
             #
-            #Don't return, exit
+            #Don't return, throw exception to generate trace
             #
-            sys.exit(1)
+            raise HamlibError("validate_arg_type parameter error")
 
         #
         # (arg,)
@@ -382,9 +388,9 @@ ArgError: Element at offset {} has duplicate definitions of type
     + generate_stack_trace())
 
                 #
-                #Don't return, exit
+                #Don't return, throw exception to generate trace
                 #
-                sys.exit(1)
+                raise HamlibError("validate_arg_type parameter error")
 
             #
             #Save new type
@@ -430,21 +436,26 @@ ArgError: Detected invalid type "{}" at argument offset {}.
     ####################################################################
 
     #
-    #Explicitly check aargs_to_check table list passed to this function
+    #Explicitly check args_to_check table list passed to this function
     #to assure that its format is correct.
     #
     if not isinstance(args_to_check, tuple_or_list):
         sys.stderr.write("""
 ArgError: validate_arg_type must be called with a tuple or list
-          argument."""
-    + generate_stack_trace())
-        sys.exit(1)
+          argument.""")
+        #
+        #Don't return, throw exception to generate trace
+        #
+        raise HamlibError("validate_arg_type parameter error")
 
     if not args_to_check:
         sys.stderr.write("""
 ArgError: validate_arg_type called with empty tuple or list."""
     + generate_stack_trace())
-        sys.exit(1)
+        #
+        #Don't return, throw exception to generate trace
+        #
+        raise HamlibError("validate_arg_type parameter error")
 
     #
     #Go through the tuple (or list) and assure each tuple consists of an
@@ -484,15 +495,19 @@ ArgError: validate_arg_type called with empty tuple or list."""
     #
     if errors:
         #
-        #Report all wrong type argument errros that were detected.
+        #Report all wrong type argument errors that were detected.
         #
-        sys.stderr.write(errors + generate_stack_trace(2))
+        sys.stderr.write(errors)
         #
-        #Exit immediately to make this a very hard error since we're not
-        #going to try and recover from a bad argumetn passed to a
+        #Exit immediately to make this a hard error since we're not
+        #going to try and recover from a bad argument passed to a
         #function. That's a programming error that needs to be fixed!
         #
-        sys.exit(1)
+
+        #
+        #Don't return, throw exception to generate trace
+        #
+        raise HamlibError("Bad argument type passed to function")
 
     #
     #All arguments are valid, return
@@ -3785,7 +3800,7 @@ def String(test):
         (test, str),
     ))
 
-    if rf.fullmatch(r'[\ -~]+', test):
+    if re.fullmatch(r'[\ -~]+', test):
         return("")
 
     return("""
@@ -4906,31 +4921,9 @@ xml_subset_record_fields = {
     }
 
 #
-#Create text strings as keys to the tables and to allow hashing into
-#them.
+#The XML data types
 #
-ADIF_header_fields = "ADIF header"
-ADIF_record_fields = "ADIF record"
-XML_header_fields = "XML header"
-XML_record_fields = "XML record"
-
-#
-#Valid field dictonaries, split out ADIF and XML
-#
-valid_adif_field_tables = {
-    ADIF_header_fields : header_fields,
-    ADIF_record_fields : record_fields,
-    }
-
-valid_xml_field_tables = {
-    XML_header_fields : header_fields,
-    XML_record_fields : {**record_fields, **xml_subset_record_fields},
-    }
-
-#
-#Build up full list of valid field tables from the ADIF and XML tables
-#
-valid_field_tables = {**valid_adif_field_tables, **valid_xml_field_tables}
+xml_record_fields = {**record_fields, **xml_subset_record_fields}
 
 #
 #USERDEFn is a special case
@@ -5028,13 +5021,13 @@ def get_dti(dti):
     """
 
     validate_arg_type((
-        (dti, str, type(get_dti)),
+        (dti, tuple, type(get_dti)),
     ))
 
     if callable(dti):
         return("E")
     else:
-        return(data_types[dti][0])
+        return(data_types[dti[0]][0])
         
 ########################################################################
 ########################################################################
@@ -5407,15 +5400,14 @@ def field(field_name, field_contents, data_type_indicator=""):
                             data_type_indicator,
                             field_contents))
 
-def validate_field(field_type, field_name, field_contents):
+def validate_field(field_definitions, field_name, field_contents):
     """
     Make sure specified header field is a valid fiend and it's contents
     are valid.
 
     Arguments:
         field_definitions:
-            Contains field type in text. Valid options are "ADIF header",
-            "ADIF record", "XML header" or "XML record".
+            Dictonary of valid field names.
         field_name:
             Name of the field
         field_contents:
@@ -5429,26 +5421,10 @@ def validate_field(field_type, field_name, field_contents):
     """
 
     validate_arg_type((
-        (field_type, str),
+        (field_definitions, dict),
         (field_name, str),
         (field_contents, str),
     ))
-
-    #
-    #Make sure we passed a valid field type to this function
-    #
-    if field_type not in valid_field_tables:
-        print("""
-SevereError: Field type of "{}" passed to validate_field, but it must be one
-             of the following:
-             "{}"
-""".format(field_type, '", "'.join(valid_field_tables)) + generate_stack_trace())
-        sys.exit(1)
-
-    #
-    #Translate field type to dictionary of valid fields
-    #
-    field_definitions = valid_field_tables[field_type]
 
     #
     #Make sure field is a valid header field. If not, report error and
@@ -5456,8 +5432,8 @@ SevereError: Field type of "{}" passed to validate_field, but it must be one
     #
     if field_name.upper() not in field_definitions:
         return("""
-    field "{}" is not a valid {} field.
-""".format(field_name, field_type))
+    field "{}" is not a valid field name.
+""".format(field_name))
 
     #
     #Make sure field contents are valid by calling the field
@@ -5466,17 +5442,45 @@ SevereError: Field type of "{}" passed to validate_field, but it must be one
     #We're guaranteed that the validation routine exists becasue of the
     #up-front library checking that happens at the end of this module.
     #
-    errors = eval(field_definitions[field_name.upper()])(field_contents)
+    field_type = field_definitions[field_name.upper()]
+
+    if callable(field_type):
+        #
+        #It's an enumeration type with a validation function. Call the
+        #valididation function.
+        #
+        errors = field_type(field_contents)
+    else:
+        #
+        #It's not an ennumeration type. Cjeck all types and if any one
+        #comes back without errors, were good to go...
+        #
+        errors = ""
+        for test_type in field_type:
+            #
+            #Validate against each data type possible.
+            #
+            hold_error = data_types[test_type][1](field_contents)
+            if not hold_error:
+                #
+                #If this data type matches, we're good. Clear any errors
+                #you may have found for other data types.
+                #
+                errors = ""
+                #
+                #Exit the loop
+                #
+                break
+
+            #
+            #We never found a valid data type, report errors.
+            #
+            errors += hold_errors
 
     #
-    #If errors, format them
+    #Retrun errors or null string
     #
-    if errors:
-        return("""
-    The "{}" field's contents are not valid for the following reasons:"
-""".format(field_name) + errors)
-
-    return("")
+    return(errors)
 
 def ADIF_record(fields, spaces=0, include_data_type=False):
     """
@@ -5516,7 +5520,7 @@ def ADIF_record(fields, spaces=0, include_data_type=False):
         #
         #Validate field and contents
         #
-        errors += validate_field(ADIF_record_fields, field_name, field_value)
+        errors += validate_field(record_fields, field_name, field_value)
 
         #
         #If any errors, detected, just continue checking
@@ -5524,6 +5528,9 @@ def ADIF_record(fields, spaces=0, include_data_type=False):
         if errors:
             continue
 
+        #
+        #Generate data type identifier if reqested
+        #
         dti = get_dti(record_fields[field_name]) if include_data_type else ""
 
         #
@@ -5542,8 +5549,8 @@ def ADIF_record(fields, spaces=0, include_data_type=False):
     #
     if errors:
         print("""
-SevereError: Errors were found with the following {} fields:
-""".format(ADIF_header_fields) + errors)
+SevereError: Errors were found with the following ADIF record fields:
+""" + errors)
         sys.exit(1)
 
     #
@@ -5580,7 +5587,7 @@ def ADIF_header(fields, header_comment="", include_data_type=False):
     zdate = time.strftime("%Y-%m-%d", zulu)
     ztime = time.strftime("%H:%M:%S Zulu", zulu)
 
-    adif_header = "Generated on {} at {} Zulu ".format(zdate, ztime) \
+    adif_header = "Generated on {} at {} ".format(zdate, ztime) \
         + header_comment.strip() + "\n\n"
 
     #
@@ -5602,7 +5609,7 @@ def ADIF_header(fields, header_comment="", include_data_type=False):
         #
         #Validate field and contents
         #
-        errors += validate_field(ADIF_header_fields, field_name, field_value)
+        errors += validate_field(header_fields, field_name, field_value)
 
         #
         #If any errors, detected, just continue checking
@@ -5628,8 +5635,8 @@ def ADIF_header(fields, header_comment="", include_data_type=False):
     #
     if errors:
         print("""
-SevereError: Errors were found with the following {} fields:
-""".format(ADIF_header_fields) + errors)
+SevereError: Errors were found with the following ADIF header fields:
+""" + errors)
         sys.exit(1)
 
     #
