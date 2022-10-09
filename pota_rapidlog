@@ -12,7 +12,7 @@
 #### Global definitions
 ####
 
-pota_rapidlog_version = "2022/09/04"
+pota_rapidlog_version = "00.2022.10.09"
 
 ####
 #### Import support modules
@@ -24,14 +24,15 @@ import shutil
 import sys
 import time
 
-comment_re = r'"[\ -\!\#-\~]*("|$)?'
+re_comment = r'"[\ -\!\#-\~]*("|$)?'
+re_power = r'\d+W'
+adif_file_extension = ".adif"
 
 ####
 #### Import large tables and help files to de-clutter the program
 ####
 
-import k0rlo
-import adif
+import hamlibIO
 
 #
 #This is the order that the ADIF tags will be placed into the file for
@@ -106,7 +107,39 @@ def determine_filename(callsign, park, state):
 
     if state:
         state = "_" + state
-    return(callsign.replace("/", "-") + "_" + park + state + adif.extension)
+    return(callsign.replace("/", "-") + "_" + park + state + adif_file_extension)
+
+def valid_power(power):
+    """
+    See if valid power specified. If so, return it. If not, return False
+
+    Arguments:
+        power:   String containing power to be verified
+
+    Returns:
+        Power string if correct
+        False if power string incorrectly formatted
+    """
+
+    hamlibIO.validate_arg_type((
+        (power, str),
+    ))
+
+    #
+    #If it's a power, return it.
+    #
+    if re.fullmatch(re_power, power):
+        #
+        #Pack it into a tuple to differentiate it from an error string and
+        #remove the "W" from the end.
+        #
+        return((power[:-1],))
+
+    return("""
+    "{}" is not a valid power syntax. It should be a number followed
+       by a "W".
+       Example: "100W" or "5W".
+""".format(power))
 
 ###############################################################################
 ###############################################################################
@@ -129,9 +162,10 @@ Type "HELP" at any time to get the complete documentation for pota_rapidlog.
 ####
 
 #
-#Multiple operators may be specified if you're working with more than one
-#operator at a radio. When a contact is made, it is possible to exclude
-#an operator in case they're not available for that particular contact.
+#Multiple operators may be specified if you're working with more than
+#one operator at a radio. When a contact is made, it is possible to
+#exclude an operator in case they're not available for that particular
+#contact.
 #
 
 help = """
@@ -140,28 +174,30 @@ Enter one or more operator callsigns (operators "sharing a microphone").
     Examples: "K0RLO", "K0RLO W1JU" or "K0RLO/R1"
 """
 while(True):
-    operators = k0rlo.get_input(help, """
+    operators = hamlibIO.get_input(help,
+        """
 Operator callsign(s): """).upper()
     #
     #Validate callsign format of all operators supplied
     #
     bad_callsign = False
     ops = {}
-    for operator in re.split(k0rlo.default_split, operators):
+    for operator in re.split(hamlibIO.default_split, operators):
         #
-        #Save operator in dictonary to eliminate duplicates
+        #Upcase and save operator in dictonary to eliminate duplicates
         #
         ops[operator] = True
         #
         #Validate callsign
         #
-        report_error = k0rlo.valid_callsign(operator)
+        report_error = hamlibIO.valid_callsign(operator)
         if report_error:
             print(report_error)
             bad_callsign = True
 
     #
-    #If a bad callsign format was detected, ask the callsign question again
+    #If a bad callsign format was detected, ask the callsign question
+    #again
     #
     if not bad_callsign:
         break
@@ -170,7 +206,7 @@ Operator callsign(s): """).upper()
 #
 #Save unique operators
 #
-operators = sorted(ops.keys())
+operators = sorted(ops)
 
 ####
 #### Ask what park(s) are being activated
@@ -186,7 +222,8 @@ Enter one or more park codes. Multiple park codes are when you're activating
     Examples: "K-1211" or "K-1211 K-1214"
 """
 while(True):
-    parks = k0rlo.get_input(help, """
+    parks = hamlibIO.get_input(help,
+        """
 Park code(s): """).upper()
 
     #
@@ -194,7 +231,7 @@ Park code(s): """).upper()
     #
     bad_park = False
     pks = {}
-    for park in re.split(k0rlo.default_split, parks):
+    for park in re.split(hamlibIO.default_split, parks):
         #
         #Save park in dictonary to eliminate duplicates
         #
@@ -222,7 +259,7 @@ Error: "{}" is not a valid format for a park.
 #
 #Save unique parks
 #
-parks = sorted(pks.keys())
+parks = sorted(pks)
 
 ####
 #### Ask for state
@@ -239,8 +276,10 @@ while(True):
     #
     #Get optional state information that will be added at end of filename
     #
-    state = k0rlo.get_input(help, """
-State/province/etc. of activation [None specified]: """).upper()
+    state = hamlibIO.get_input(help,
+        """
+State/province/etc. of activation [None specified]: """,
+        default="").upper()
 
     #
     #If no state, get out of loop
@@ -253,7 +292,7 @@ State/province/etc. of activation [None specified]: """).upper()
     #assure it's valid.
     #
     state_split = re.split(r'[\s-]+', state)
-    if state_split[0] in adif.state_enumeration:
+    if state_split[0] in hamlibIO.state_enumeration:
         if len(state_split) != 2:
             print("""
 Error: You must specify a country-state or country-province for an activation.
@@ -267,7 +306,7 @@ Error: You must specify a country-state or country-province for an activation.
         #
         #See if this state or province is valid within this country
         #
-        if state in adif.state_enumeration[country]:
+        if state in hamlib.state_enumeration[country]:
             #
             #Reassemble country and state and use it for logging
             #
@@ -297,9 +336,9 @@ Type <Enter> if this is not a special event.
     Enter the special event callsign.
     Examples: "W4W" or "W3MX"
 """
-    special_event_callsign = k0rlo.get_input(help,
+    special_event_callsign = hamlibIO.get_input(help,
         """
-Special event callsign [NONE]: """).upper()
+Special event callsign [NONE]: """, default="").upper()
 
     #
     #If nothing entered, leave special_event_callsign blank
@@ -310,7 +349,7 @@ Special event callsign [NONE]: """).upper()
     #
     #Validate callsign of special event
     #
-    report_error = k0rlo.valid_callsign(special_event_callsign, slash=False)
+    report_error = hamlibIO.valid_callsign(special_event_callsign, slash=False)
     if report_error:
         #
         #If invalid, report
@@ -361,7 +400,7 @@ Do you wish to archive it and start a new log""".format(filename,
         #
         #New log file to start, rename the old file
         #
-        if k0rlo.get_yes_no(help, prompt, "N"):
+        if hamlibIO.get_yes_no(help, prompt, "N"):
             new_filename = filename + time.strftime("_%Y%m%d-%H%M%S", mtime)
             print("""
 Renaming existing log file "{}" to "{}"
@@ -384,19 +423,19 @@ Enter the band or frequency. If you enter a frequency, the band will be
     frequency first, followed by the receive frequency.
     Examples: "14.215" or "114.215 14.275"
 """
-    freq = k0rlo.get_input(help, """
+    freq = hamlibIO.get_input(help, """
 Band or frequency: """).upper()
 
     #
     #Validate band or frequency
     #
-    test = adif.valid_band(freq)
+    test = hamlibIO.valid_band(freq)
     if type(test) != str:
         bands = test
         frequencies = []
         break
 
-    test = adif.valid_frequency(freq)
+    test = hamlibIO.valid_frequency(freq)
     if type(test) != str:
         (bands, frequencies) = test
         break
@@ -423,13 +462,13 @@ Enter the QSO mode and, if desired, the submode. Note that you can specify JUST
     the submode and the mode will be determined.
     Examples: "CW", "SSB", "SSB USB", "LSB", "OLIVIA 4/125"
 """
-    mode = k0rlo.get_input(help, """
+    mode = hamlibIO.get_input(help, """
 Operating mode: """).upper()
 
     #
     #Validate mode
     #
-    test = adif.valid_mode(mode)
+    test = hamlibIO.valid_mode(mode)
     if type(test) != str:
         mode_submode = test
         break
@@ -470,12 +509,15 @@ while (True):
     if power[0] != "0":
         display_power = power[0] + "W"
     else:
-        display_power = "NOPWR"
+        display_power = "nopwr"
 
-    if len(mode_submode) > 1:
-        display_mode = mode_submode[1]
-    else:
-        display_mode = mode_submode[0]
+    #
+    #If we just have a mode (len == 1), display that ([0]]. If we have a
+    #mode AND submode (len = 2), display the submode ([1]).
+    #
+    #...which happens to be the len - 1.
+    #
+    display_mode = mode_submode[len(mode_submode) - 1]
 
     #
     #Do not report hunter power unless specified in log entry
@@ -506,7 +548,7 @@ At this prompt you can do the following:
 
         All optional information may be entered in ANY order.
 """
-    original_hunter_info = k0rlo.get_input(help, 
+    original_hunter_info = hamlibIO.get_input(help, 
         "({}:{}:{}) Hunter contact information: ".format(bands[0],
             display_mode, display_power))
 
@@ -515,7 +557,7 @@ At this prompt you can do the following:
     #
     #See if new band(s) have been specified
     #
-    test = adif.valid_band(hunter_info)
+    test = hamlibIO.valid_band(hunter_info)
     if type(test) != str:
         #
         #Save both band and no frequencies
@@ -527,7 +569,7 @@ At this prompt you can do the following:
     #
     #See ifnew frequency (-ies) have been specified
     #
-    test = adif.valid_frequency(hunter_info)
+    test = hamlibIO.valid_frequency(hunter_info)
     if type(test) != str:
         #
         #Save both band(s) and frequencies
@@ -538,7 +580,7 @@ At this prompt you can do the following:
     #
     #See if a new mode has been specified
     #
-    test = adif.valid_mode(hunter_info)
+    test = hamlibIO.valid_mode(hunter_info)
     if type(test) != str:
         mode_submode = test
         continue
@@ -546,7 +588,7 @@ At this prompt you can do the following:
     #
     #See if a new power has been specified
     #
-    test = adif.valid_power(hunter_info)
+    test = valid_power(hunter_info)
     if type(test) != str:
         #
         #Save new power. Setting power to "0" will cause no power to be
@@ -588,8 +630,8 @@ Error: More than two double quotes '"' detected. A comment must have two double
         #
         #Pull out comment from opening quote to closing quote or EOL (re $)
         #
-        comment = re.search(comment_re, original_hunter_info)[0][1:]
-        hunter_info = re.sub(comment_re, " ", hunter_info).strip()
+        comment = re.search(re_comment, original_hunter_info)[0][1:]
+        hunter_info = re.sub(re_comment, " ", hunter_info).strip()
 
         #
         #Remove closing quote if necessary
@@ -608,7 +650,7 @@ Error: More than two double quotes '"' detected. A comment must have two double
     #string) or RST reports and/or a park-to-park which will specify
     #the park as following character strings.
     #
-    hunter_info = re.split(k0rlo.default_split, hunter_info)
+    hunter_info = re.split(hamlibIO.default_split, hunter_info)
 
     #
     #Get the hunter callsign which is the first (and perhaps
@@ -619,7 +661,7 @@ Error: More than two double quotes '"' detected. A comment must have two double
     #
     #Start off with checking if it's a bad callsign
     #
-    report_error = k0rlo.valid_callsign(hunter_callsign)
+    report_error = hamlibIO.valid_callsign(hunter_callsign)
     if report_error:
         print(report_error)
 
@@ -725,64 +767,64 @@ Error: "{}" is not a recognized entry. Press <Enter> to get help on how to
         continue
 
     ####
-    #### Start assembling the record to be logged, start with the stuff
-    #### common to all the record(s) to be written. Start with a ADIF record
-    #### only containing MY_SIG = POTA
+    #### Start assembling the QSO to be logged, start with the stuff
+    #### common to all the record(s) to be written. Start with a ADIF
+    #### record only containing MY_SIG = POTA
     ####
-    log_record = {"MY_SIG":"POTA"}
+    QSO_record = {"MY_SIG":"POTA"}
 
     #
     #Save the date, time and hunter callsign
     #
-    log_record["QSO_DATE"] = time.strftime("%Y%m%d", utc)
-    log_record["TIME_ON"] = time.strftime("%H%M%S", utc)
-    log_record["CALL"] = hunter_callsign
+    QSO_record["QSO_DATE"] = time.strftime("%Y%m%d", utc)
+    QSO_record["TIME_ON"] = time.strftime("%H%M%S", utc)
+    QSO_record["CALL"] = hunter_callsign
 
     #
     #Save transmit, and optionally receive band in record
     #
-    for index in range(len(bands)):
-        log_record[band_tags[index]] = bands[index]
+    for index, band in enumerate(bands):
+        QSO_record[band_tags[index]] = band
 
     #
     #Save mode and submode
     #
-    for index in range(len(mode_submode)):
-        log_record[mode_tags[index]] = mode_submode[index]
+    for index, mode in enumerate(mode_submode):
+        QSO_record[mode_tags[index]] = mode
 
     #
     #Save transmit, and optionally receive frequencies in record
     #
-    for index in range(len(frequencies)):
-        log_record[frequency_tags[index]] = frequencies[index]
+    for index, freq in enumerate(frequencies):
+        QSO_record[frequency_tags[index]] = freq
 
     #
     #Save optional transmit and receive power in record
     #
-    for index in range(len(power)):
+    for index, pwr in enumerate(power):
         if power[index] != "0":
             #
             #If there is a power specified, report it
             #
-            log_record[power_tags[index]] = power[index]
+            QSO_record[power_tags[index]] = pwr
 
     #
     #Save sent and received RST, if specified
     #
-    for index in range(len(rst)):
-        log_record[rst_tags[index]] = rst[index]
+    for index, rst_info in enumerate(rst):
+        QSO_record[rst_tags[index]] = rst_info
 
     #
     #Save state if specified
     #
     if state:
-        log_record["MY_STATE"] = state
+        QSO_record["MY_STATE"] = state
 
     #
     #Save comment if specified
     #
     if comment:
-        log_record["COMMENT"] = comment
+        QSO_record["COMMENT"] = comment
 
     #
     #Log contacts for all operators (any input will skip an
@@ -800,7 +842,7 @@ Enter "N" if the specified operator is unable to perform an exchange with
         #microphone".
         #
         if ((len(operators) > 1) and
-            not k0rlo.get_yes_no(help, "Log contact for " + operator, "Y")):
+            not hamlibIO.get_yes_no(help, "Log contact for " + operator)):
             #
             #If "N" typed, skip this operator
             #
@@ -813,79 +855,81 @@ Enter "N" if the specified operator is unable to perform an exchange with
             #
             #Log the operator
             #
-            log_record["OPERATOR"] = operator
+            QSO_record["OPERATOR"] = operator
 
             #
-            #Determine STATION_CALLSIGN and logfile name based on if there's a
-            #special_event_callsign or not.
+            #Determine STATION_CALLSIGN and logfile name based on if
+            #there's a special_event_callsign or not.
             #
             if special_event_callsign:
-                log_record["STATION_CALLSIGN"] = special_event_callsign
+                QSO_record["STATION_CALLSIGN"] = special_event_callsign
             else:
-                log_record["STATION_CALLSIGN"] = operator
+                QSO_record["STATION_CALLSIGN"] = operator
 
             #
             #Filename is always based on the STATION_CALLSIGN
             #
-            log_filename = determine_filename(log_record["STATION_CALLSIGN"], park, state)
+            log_filename = determine_filename(QSO_record["STATION_CALLSIGN"],
+                park, state)
 
             #
-            #We wait until we REALLY need to create a log file. Time to see if
-            #we need to create the file now, and if so, write the header.
+            #We wait until we REALLY need to create a log file. Time to
+            #see if we need to create the file now, and if so, write the
+            #header.
             #
             if not os.path.exists(log_filename):
                 #
                 #If this log file does not yet exist, create a header
                 #
+                #Create the header before opening the file in case an
+                #error is detected in the header, which will casue an
+                #exception and abort.
+                #
+                header = {
+                    "PROGRAMVERSION":pota_rapidlog_version
+                    }
+
+                header = hamlibIO.ADIF_header(header)
+
                 f = open(log_filename, "w")
-                f.write(("Parks On The Air (POTA) rapid log\n" +
-                    adif.tag("PROGRAMID", "pota_rapidlog") + "\n" +
-                    adif.tag("PROGRAMVERSION", pota_rapidlog_version) +
-                    "\n" +
-                    adif.tag("CREATED_TIMESTAMP",
-                        time.strftime("%Y%m%d %H%M%S", utc)) +
-                        "<EOH>\n"))
+                f.write(header)
                 f.close()
 
             #
             #Add this park to the record to be written
             #
-            log_record["MY_SIG_INFO"] = park
+            QSO_record["MY_SIG_INFO"] = park
 
             if hunter_parks:
                 #
-                #We have one or more park-to-park contacts to log, open
-                #the file and write [perhaps] multiple records
-                #
-                f = open(log_filename, "a")
-                #
                 #We're writing Park to park information, so setup the SIG
-                log_record["SIG"] = "POTA"
+                #
+                QSO_record["SIG"] = "POTA"
 
                 #
-                #Now write records for all park to park parks
+                #Now create the records for all park to parks
                 #
-                for hunter_park in sorted(hunter_parks.keys()):
+                QSO = ""
+                for hunter_park in sorted(hunter_parks):
                     #
-                    #This is a park to park, fill in the addiitional
+                    #Since this is a park to park, fill in the additonal
                     #information
                     #
-                    log_record["SIG_INFO"] = hunter_park
-                    f.write(adif.record(log_record, adif_tag_support_and_order))
-                #
-                #Keep the file closed to avoid dataloss
-                #
-                f.close()
+                    QSO_record["SIG_INFO"] = hunter_park
+                    QSO += hamlibIO.ADIF_record(QSO_record)
             else:
                 #
-                #No park to park, write the record for this normal hunter
-                #contact
+                #No park to park, create the record for this normal
+                #hunter contact
                 #
-                f = open(log_filename, "a")
-                f.write(adif.record(log_record, adif_tag_support_and_order))
-                #
-                #Keep the file closed to avoid dataloss
-                #
-                f.close()
+                QSO = hamlibIO.ADIF_record(QSO_record)
+
+            #
+            #Open, write and close the ADIF file to avoid corruption if
+            #interrupted.
+            #
+            f = open(log_filename, "a")
+            f.write(QSO)
+            f.close()
 
 exit()

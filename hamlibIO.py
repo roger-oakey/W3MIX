@@ -12,12 +12,13 @@ import traceback
 #Global variables
 #
 
-ADIF_VERSION = "3.1.3"
-ADIF_VERSION_FIELD = "ADIF_VER"
+ADIF_VER = "3.1.3"
+ADIF_VER_FIELD = "ADIF_VER"
+CREATED_TIMESTAMP_FIELD = "CREATED_TIMESTAMP"
+PROGRAMID_FIELD = "PROGRAMID"
 
 default_split = r'[,:;\s\t]+'
 helpfile_extension = ".help"
-adiffile_extension = ".adif"
 tuple_or_list = (tuple, list)
 
 cr = "\r"
@@ -58,11 +59,27 @@ class HamlibError(Exception):
 ########################################################################
 ########################################################################
 
+
 #
 #Script help file must be in the same directory as the script, and have
 #the same name of the script with ".help" added to the end of it.
 #
-script_path = os.path.abspath(sys.argv[0])
+#Tolerate running from the Python interpreter by creating a synthetic
+#script name if necessary.
+#
+if os.path.isfile(sys.argv[0]):
+    #
+    #Invoked from a script, use the normal path including script (file)
+    #name.
+    #
+    script_path = os.path.abspath(sys.argv[0])
+else:
+    #
+    #It's a directory, create a synthetic script name for testing.
+    #
+    script_path = os.path.join(os.path.abspath(sys.argv[0]),'no.script')
+
+script_name = os.path.basename(script_path)
 script_help = script_path + helpfile_extension
 
 #
@@ -80,48 +97,8 @@ else:
     #No help file report no help
     #
     script_help = """
-No script help file.
-"""
-
-def generate_stack_trace(skip_depth:int=1) -> str:
-    """
-    Generate a stack trace to display so the point of failure for
-    critical errors that can cause crashes can be found quickly.
-
-    Arguments:
-        skip_depth:
-            Number of deepest functions to skip. Typically 1 to avoid
-            this function from showing up in the stack dump (make the
-            top of the displayed stack show where the error was, not
-            this function).
-
-    Returns:
-        String containing stack trace
-    """
-
-    #
-    #Generate stack trace and remove specified number of entries from end.
-    #Add tiemstamp and lines around it to make it look pretty.
-    #
-    stack = list(traceback.format_stack())
-    stack =  """
-========================================================================
-
-{}
-========================================================================
-
-
-
-""".format(
-           #
-           #Remove top entries on stack to eliminate the reporting
-           #function(s). In other words, "declutter" the stack so it
-           #ends with the function that actually caused the error, not
-           #the functions printing the stack.
-           #
-           ''.join(stack[:-abs(skip_depth)]))
-
-    return stack
+No script help file for {}.
+""".format(script_name)
 
 def validate_arg_type(args_to_check) -> None:
     """
@@ -256,7 +233,7 @@ ArgError: Unable to translate type "{}" to string.""".format(xlate))
         #there's no easy way to specify "NoneType" as a type as there is
         #for "str" or "int". So for argument type checking allow "None"
         #to be specified as a "type" and do a special check for it here
-        #and chenage it to "NoneType".
+        #and change it to "NoneType".
         #
         if one_type is None:
             return type(None)
@@ -315,8 +292,7 @@ ArgError: Element at offset {}, type offset {} is not a type or None.
 ArgError: Element at offset {} is not a tuple or list. Should be an
           tuple or list starting with the function argument followed by
           a list of zero or more valid types.
-""".format(arg_off)
-    + generate_stack_trace())
+""".format(arg_off))
 
             #
             #Don't return, throw exception to generate trace
@@ -384,8 +360,7 @@ ArgError: Element at offset {} has duplicate definitions of type
 """.format(arg_off,
         type_xlate(hold_type),
         valid_types[hold_type],
-        index)
-    + generate_stack_trace())
+        index))
 
                 #
                 #Don't return, throw exception to generate trace
@@ -450,8 +425,7 @@ ArgError: validate_arg_type must be called with a tuple or list
 
     if not args_to_check:
         sys.stderr.write("""
-ArgError: validate_arg_type called with empty tuple or list."""
-    + generate_stack_trace())
+ArgError: validate_arg_type called with empty tuple or list.""")
         #
         #Don't return, throw exception to generate trace
         #
@@ -528,6 +502,9 @@ Ant_Path_Enumeration = {
     "S" : "short path",
     "L" : "long path"
     }
+
+ARRL_SECTION_ENUMERATION_SECTION_NAME_INDEX = 0
+ARRL_SECTION_ENUMERATION_DXCC_ENTITY_CODE_INDEX = 1
 
 ARRL_Section_Enumeration = {
     "AL" : ("Alabama", ("291",)),
@@ -647,6 +624,9 @@ Award_Ennumeration = (
     "USACA",
     "VUCC"
 )
+
+BAND_ENUMERATION_LOWER_FREQ_INDEX = 0
+BAND_ENUMERATION_UPPER_FREQ_INDEX = 1
 
 Band_Enumeration = {
     "2190M"  : (0.1357, 0.1378),
@@ -925,6 +905,10 @@ Continent_Enumeration = {
     "AN" : "Antarctica"
     }
 
+CREDIT_ENUMERATION_SPONSOR_INDEX = 0
+CREDIT_ENUMERATION_AWARD_INDEX = 1
+CREDIT_ENUMERATION_FACET_INDEX = 2
+
 Credit_Ennumeration = {
     "CQDX" : ("CQ Magazine", "DX", "Mixed"),
     "CQDX_BAND" : ("CQ Magazine", "DX", "Band"),
@@ -997,6 +981,350 @@ Credit_Ennumeration = {
     "WAS_SATELLITE" : ("ARRL", "Worked All States (WAS)", "Satellite"),
     "WITUZ" : ("RSGB", "Worked ITU Zones (WITUZ)", "Mixed"),
     "WITUZ_BAND" : ("RSGB", "Worked ITU Zones (WITUZ)", "Band")
+    }
+
+DXCC_Entity_Code_Enumeration = {
+    "0" : "None (the contacted station is known to not be within a DXCC entity)",
+    "1" : "CANADA",
+    "3" : "AFGHANISTAN",
+    "4" : "AGALEGA & ST. BRANDON IS.",
+    "5" : "ALAND IS.",
+    "6" : "ALASKA",
+    "7" : "ALBANIA",
+    "9" : "AMERICAN SAMOA",
+    "10" : "AMSTERDAM & ST. PAUL IS.",
+    "11" : "ANDAMAN & NICOBAR IS.",
+    "12" : "ANGUILLA",
+    "13" : "ANTARCTICA",
+    "14" : "ARMENIA",
+    "15" : "ASIATIC RUSSIA",
+    "16" : "NEW ZEALAND SUBANTARCTIC ISLANDS",
+    "17" : "AVES I.",
+    "18" : "AZERBAIJAN",
+    "20" : "BAKER & HOWLAND IS.",
+    "21" : "BALEARIC IS.",
+    "22" : "PALAU",
+    "24" : "BOUVET",
+    "27" : "BELARUS",
+    "29" : "CANARY IS.",
+    "31" : "C. KIRIBATI (BRITISH PHOENIX IS.)",
+    "32" : "CEUTA & MELILLA",
+    "33" : "CHAGOS IS.",
+    "34" : "CHATHAM IS.",
+    "35" : "CHRISTMAS I.",
+    "36" : "CLIPPERTON I.",
+    "37" : "COCOS I.",
+    "38" : "COCOS (KEELING) IS.",
+    "40" : "CRETE",
+    "41" : "CROZET I.",
+    "43" : "DESECHEO I.",
+    "45" : "DODECANESE",
+    "46" : "EAST MALAYSIA",
+    "47" : "EASTER I.",
+    "48" : "E. KIRIBATI (LINE IS.)",
+    "49" : "EQUATORIAL GUINEA",
+    "50" : "MEXICO",
+    "51" : "ERITREA",
+    "52" : "ESTONIA",
+    "53" : "ETHIOPIA",
+    "54" : "EUROPEAN RUSSIA",
+    "56" : "FERNANDO DE NORONHA",
+    "60" : "BAHAMAS",
+    "61" : "FRANZ JOSEF LAND",
+    "62" : "BARBADOS",
+    "63" : "FRENCH GUIANA",
+    "64" : "BERMUDA",
+    "65" : "BRITISH VIRGIN IS.",
+    "66" : "BELIZE",
+    "69" : "CAYMAN IS.",
+    "70" : "CUBA",
+    "71" : "GALAPAGOS IS.",
+    "72" : "DOMINICAN REPUBLIC",
+    "74" : "EL SALVADOR",
+    "75" : "GEORGIA",
+    "76" : "GUATEMALA",
+    "77" : "GRENADA",
+    "78" : "HAITI",
+    "79" : "GUADELOUPE",
+    "80" : "HONDURAS",
+    "82" : "JAMAICA",
+    "84" : "MARTINIQUE",
+    "86" : "NICARAGUA",
+    "88" : "PANAMA",
+    "89" : "TURKS & CAICOS IS.",
+    "90" : "TRINIDAD & TOBAGO",
+    "91" : "ARUBA",
+    "94" : "ANTIGUA & BARBUDA",
+    "95" : "DOMINICA",
+    "96" : "MONTSERRAT",
+    "97" : "ST. LUCIA",
+    "98" : "ST. VINCENT",
+    "99" : "GLORIOSO IS.",
+    "100" : "ARGENTINA",
+    "103" : "GUAM",
+    "104" : "BOLIVIA",
+    "105" : "GUANTANAMO BAY",
+    "106" : "GUERNSEY",
+    "107" : "GUINEA",
+    "108" : "BRAZIL",
+    "109" : "GUINEA-BISSAU",
+    "110" : "HAWAII",
+    "111" : "HEARD I.",
+    "112" : "CHILE",
+    "114" : "ISLE OF MAN",
+    "116" : "COLOMBIA",
+    "117" : "ITU HQ",
+    "118" : "JAN MAYEN",
+    "120" : "ECUADOR",
+    "122" : "JERSEY",
+    "123" : "JOHNSTON I.",
+    "124" : "JUAN DE NOVA, EUROPA",
+    "125" : "JUAN FERNANDEZ IS.",
+    "126" : "KALININGRAD",
+    "129" : "GUYANA",
+    "130" : "KAZAKHSTAN",
+    "131" : "KERGUELEN IS.",
+    "132" : "PARAGUAY",
+    "133" : "KERMADEC IS.",
+    "135" : "KYRGYZSTAN",
+    "136" : "PERU",
+    "137" : "REPUBLIC OF KOREA",
+    "138" : "KURE I.",
+    "140" : "SURINAME",
+    "141" : "FALKLAND IS.",
+    "142" : "LAKSHADWEEP IS.",
+    "143" : "LAOS",
+    "144" : "URUGUAY",
+    "145" : "LATVIA",
+    "146" : "LITHUANIA",
+    "147" : "LORD HOWE I.",
+    "148" : "VENEZUELA",
+    "149" : "AZORES",
+    "150" : "AUSTRALIA",
+    "152" : "MACAO",
+    "153" : "MACQUARIE I.",
+    "157" : "NAURU",
+    "158" : "VANUATU",
+    "159" : "MALDIVES",
+    "160" : "TONGA",
+    "161" : "MALPELO I.",
+    "162" : "NEW CALEDONIA",
+    "163" : "PAPUA NEW GUINEA",
+    "165" : "MAURITIUS",
+    "166" : "MARIANA IS.",
+    "167" : "MARKET REEF",
+    "168" : "MARSHALL IS.",
+    "169" : "MAYOTTE",
+    "170" : "NEW ZEALAND",
+    "171" : "MELLISH REEF",
+    "172" : "PITCAIRN I.",
+    "173" : "MICRONESIA",
+    "174" : "MIDWAY I.",
+    "175" : "FRENCH POLYNESIA",
+    "176" : "FIJI",
+    "177" : "MINAMI TORISHIMA",
+    "179" : "MOLDOVA",
+    "180" : "MOUNT ATHOS",
+    "181" : "MOZAMBIQUE",
+    "182" : "NAVASSA I.",
+    "185" : "SOLOMON IS.",
+    "187" : "NIGER",
+    "188" : "NIUE",
+    "189" : "NORFOLK I.",
+    "190" : "SAMOA",
+    "191" : "NORTH COOK IS.",
+    "192" : "OGASAWARA",
+    "195" : "ANNOBON I.",
+    "197" : "PALMYRA & JARVIS IS.",
+    "199" : "PETER 1 I.",
+    "201" : "PRINCE EDWARD & MARION IS.",
+    "202" : "PUERTO RICO",
+    "203" : "ANDORRA",
+    "204" : "REVILLAGIGEDO",
+    "205" : "ASCENSION I.",
+    "206" : "AUSTRIA",
+    "207" : "RODRIGUEZ I.",
+    "209" : "BELGIUM",
+    "211" : "SABLE I.",
+    "212" : "BULGARIA",
+    "213" : "SAINT MARTIN",
+    "214" : "CORSICA",
+    "215" : "CYPRUS",
+    "216" : "SAN ANDRES & PROVIDENCIA",
+    "217" : "SAN FELIX & SAN AMBROSIO",
+    "219" : "SAO TOME & PRINCIPE",
+    "221" : "DENMARK",
+    "222" : "FAROE IS.",
+    "223" : "ENGLAND",
+    "224" : "FINLAND",
+    "225" : "SARDINIA",
+    "227" : "FRANCE",
+    "230" : "FEDERAL REPUBLIC OF GERMANY",
+    "232" : "SOMALIA",
+    "233" : "GIBRALTAR",
+    "234" : "SOUTH COOK IS.",
+    "235" : "SOUTH GEORGIA I.",
+    "236" : "GREECE",
+    "237" : "GREENLAND",
+    "238" : "SOUTH ORKNEY IS.",
+    "239" : "HUNGARY",
+    "240" : "SOUTH SANDWICH IS.",
+    "241" : "SOUTH SHETLAND IS.",
+    "242" : "ICELAND",
+    "245" : "IRELAND",
+    "246" : "SOVEREIGN MILITARY ORDER OF MALTA",
+    "247" : "SPRATLY IS.",
+    "248" : "ITALY",
+    "249" : "ST. KITTS & NEVIS",
+    "250" : "ST. HELENA",
+    "251" : "LIECHTENSTEIN",
+    "252" : "ST. PAUL I.",
+    "253" : "ST. PETER & ST. PAUL ROCKS",
+    "254" : "LUXEMBOURG",
+    "256" : "MADEIRA IS.",
+    "257" : "MALTA",
+    "259" : "SVALBARD",
+    "260" : "MONACO",
+    "262" : "TAJIKISTAN",
+    "263" : "NETHERLANDS",
+    "265" : "NORTHERN IRELAND",
+    "266" : "NORWAY",
+    "269" : "POLAND",
+    "270" : "TOKELAU IS.",
+    "272" : "PORTUGAL",
+    "273" : "TRINDADE & MARTIM VAZ IS.",
+    "274" : "TRISTAN DA CUNHA & GOUGH I.",
+    "275" : "ROMANIA",
+    "276" : "TROMELIN I.",
+    "277" : "ST. PIERRE & MIQUELON",
+    "278" : "SAN MARINO",
+    "279" : "SCOTLAND",
+    "280" : "TURKMENISTAN",
+    "281" : "SPAIN",
+    "282" : "TUVALU",
+    "283" : "UK SOVEREIGN BASE AREAS ON CYPRUS",
+    "284" : "SWEDEN",
+    "285" : "VIRGIN IS.",
+    "286" : "UGANDA",
+    "287" : "SWITZERLAND",
+    "288" : "UKRAINE",
+    "289" : "UNITED NATIONS HQ",
+    "291" : "UNITED STATES OF AMERICA",
+    "292" : "UZBEKISTAN",
+    "293" : "VIET NAM",
+    "294" : "WALES",
+    "295" : "VATICAN",
+    "296" : "SERBIA",
+    "297" : "WAKE I.",
+    "298" : "WALLIS & FUTUNA IS.",
+    "299" : "WEST MALAYSIA",
+    "301" : "W. KIRIBATI (GILBERT IS. )",
+    "302" : "WESTERN SAHARA",
+    "303" : "WILLIS I.",
+    "304" : "BAHRAIN",
+    "305" : "BANGLADESH",
+    "306" : "BHUTAN",
+    "308" : "COSTA RICA",
+    "309" : "MYANMAR",
+    "312" : "CAMBODIA",
+    "315" : "SRI LANKA",
+    "318" : "CHINA",
+    "321" : "HONG KONG",
+    "324" : "INDIA",
+    "327" : "INDONESIA",
+    "330" : "IRAN",
+    "333" : "IRAQ",
+    "336" : "ISRAEL",
+    "339" : "JAPAN",
+    "342" : "JORDAN",
+    "344" : "DEMOCRATIC PEOPLE'S REP. OF KOREA",
+    "345" : "BRUNEI DARUSSALAM",
+    "348" : "KUWAIT",
+    "354" : "LEBANON",
+    "363" : "MONGOLIA",
+    "369" : "NEPAL",
+    "370" : "OMAN",
+    "372" : "PAKISTAN",
+    "375" : "PHILIPPINES",
+    "376" : "QATAR",
+    "378" : "SAUDI ARABIA",
+    "379" : "SEYCHELLES",
+    "381" : "SINGAPORE",
+    "382" : "DJIBOUTI",
+    "384" : "SYRIA",
+    "386" : "TAIWAN",
+    "387" : "THAILAND",
+    "390" : "TURKEY",
+    "391" : "UNITED ARAB EMIRATES",
+    "400" : "ALGERIA",
+    "401" : "ANGOLA",
+    "402" : "BOTSWANA",
+    "404" : "BURUNDI",
+    "406" : "CAMEROON",
+    "408" : "CENTRAL AFRICA",
+    "409" : "CAPE VERDE",
+    "410" : "CHAD",
+    "411" : "COMOROS",
+    "412" : "REPUBLIC OF THE CONGO",
+    "414" : "DEMOCRATIC REPUBLIC OF THE CONGO",
+    "416" : "BENIN",
+    "420" : "GABON",
+    "422" : "THE GAMBIA",
+    "424" : "GHANA",
+    "428" : "COTE D'IVOIRE",
+    "430" : "KENYA",
+    "432" : "LESOTHO",
+    "434" : "LIBERIA",
+    "436" : "LIBYA",
+    "438" : "MADAGASCAR",
+    "440" : "MALAWI",
+    "442" : "MALI",
+    "444" : "MAURITANIA",
+    "446" : "MOROCCO",
+    "450" : "NIGERIA",
+    "452" : "ZIMBABWE",
+    "453" : "REUNION I.",
+    "454" : "RWANDA",
+    "456" : "SENEGAL",
+    "458" : "SIERRA LEONE",
+    "460" : "ROTUMA I.",
+    "462" : "SOUTH AFRICA",
+    "464" : "NAMIBIA",
+    "466" : "SUDAN",
+    "468" : "SWAZILAND",
+    "470" : "TANZANIA",
+    "474" : "TUNISIA",
+    "478" : "EGYPT",
+    "480" : "BURKINA FASO",
+    "482" : "ZAMBIA",
+    "483" : "TOGO",
+    "489" : "CONWAY REEF",
+    "490" : "BANABA I. (OCEAN I.)",
+    "492" : "YEMEN",
+    "497" : "CROATIA",
+    "499" : "SLOVENIA",
+    "501" : "BOSNIA-HERZEGOVINA",
+    "502" : "MACEDONIA",
+    "503" : "CZECH REPUBLIC",
+    "504" : "SLOVAK REPUBLIC",
+    "505" : "PRATAS I.",
+    "506" : "SCARBOROUGH REEF",
+    "507" : "TEMOTU PROVINCE",
+    "508" : "AUSTRAL I.",
+    "509" : "MARQUESAS IS.",
+    "510" : "PALESTINE",
+    "511" : "TIMOR-LESTE",
+    "512" : "CHESTERFIELD IS.",
+    "513" : "DUCIE I.",
+    "514" : "MONTENEGRO",
+    "515" : "SWAINS I.",
+    "516" : "SAINT BARTHELEMY",
+    "517" : "CURACAO",
+    "518" : "ST MAARTEN",
+    "519" : "SABA & ST. EUSTATIUS",
+    "520" : "BONAIRE",
+    "521" : "SOUTH SUDAN (REPUBLIC OF)",
+    "522" : "REPUBLIC OF KOSOVO",
     }
 
 #
@@ -3106,350 +3434,6 @@ Primary_Administrative_Subdivision_Enumeration_504 = {
     "VRT" : ("Vranov nad Toplou", None, None, None)
     }
 
-DXCC_Entity_Code_Enumeration = {
-    "0" : "None (the contacted station is known to not be within a DXCC entity)",
-    "1" : "CANADA",
-    "3" : "AFGHANISTAN",
-    "4" : "AGALEGA & ST. BRANDON IS.",
-    "5" : "ALAND IS.",
-    "6" : "ALASKA",
-    "7" : "ALBANIA",
-    "9" : "AMERICAN SAMOA",
-    "10" : "AMSTERDAM & ST. PAUL IS.",
-    "11" : "ANDAMAN & NICOBAR IS.",
-    "12" : "ANGUILLA",
-    "13" : "ANTARCTICA",
-    "14" : "ARMENIA",
-    "15" : "ASIATIC RUSSIA",
-    "16" : "NEW ZEALAND SUBANTARCTIC ISLANDS",
-    "17" : "AVES I.",
-    "18" : "AZERBAIJAN",
-    "20" : "BAKER & HOWLAND IS.",
-    "21" : "BALEARIC IS.",
-    "22" : "PALAU",
-    "24" : "BOUVET",
-    "27" : "BELARUS",
-    "29" : "CANARY IS.",
-    "31" : "C. KIRIBATI (BRITISH PHOENIX IS.)",
-    "32" : "CEUTA & MELILLA",
-    "33" : "CHAGOS IS.",
-    "34" : "CHATHAM IS.",
-    "35" : "CHRISTMAS I.",
-    "36" : "CLIPPERTON I.",
-    "37" : "COCOS I.",
-    "38" : "COCOS (KEELING) IS.",
-    "40" : "CRETE",
-    "41" : "CROZET I.",
-    "43" : "DESECHEO I.",
-    "45" : "DODECANESE",
-    "46" : "EAST MALAYSIA",
-    "47" : "EASTER I.",
-    "48" : "E. KIRIBATI (LINE IS.)",
-    "49" : "EQUATORIAL GUINEA",
-    "50" : "MEXICO",
-    "51" : "ERITREA",
-    "52" : "ESTONIA",
-    "53" : "ETHIOPIA",
-    "54" : "EUROPEAN RUSSIA",
-    "56" : "FERNANDO DE NORONHA",
-    "60" : "BAHAMAS",
-    "61" : "FRANZ JOSEF LAND",
-    "62" : "BARBADOS",
-    "63" : "FRENCH GUIANA",
-    "64" : "BERMUDA",
-    "65" : "BRITISH VIRGIN IS.",
-    "66" : "BELIZE",
-    "69" : "CAYMAN IS.",
-    "70" : "CUBA",
-    "71" : "GALAPAGOS IS.",
-    "72" : "DOMINICAN REPUBLIC",
-    "74" : "EL SALVADOR",
-    "75" : "GEORGIA",
-    "76" : "GUATEMALA",
-    "77" : "GRENADA",
-    "78" : "HAITI",
-    "79" : "GUADELOUPE",
-    "80" : "HONDURAS",
-    "82" : "JAMAICA",
-    "84" : "MARTINIQUE",
-    "86" : "NICARAGUA",
-    "88" : "PANAMA",
-    "89" : "TURKS & CAICOS IS.",
-    "90" : "TRINIDAD & TOBAGO",
-    "91" : "ARUBA",
-    "94" : "ANTIGUA & BARBUDA",
-    "95" : "DOMINICA",
-    "96" : "MONTSERRAT",
-    "97" : "ST. LUCIA",
-    "98" : "ST. VINCENT",
-    "99" : "GLORIOSO IS.",
-    "100" : "ARGENTINA",
-    "103" : "GUAM",
-    "104" : "BOLIVIA",
-    "105" : "GUANTANAMO BAY",
-    "106" : "GUERNSEY",
-    "107" : "GUINEA",
-    "108" : "BRAZIL",
-    "109" : "GUINEA-BISSAU",
-    "110" : "HAWAII",
-    "111" : "HEARD I.",
-    "112" : "CHILE",
-    "114" : "ISLE OF MAN",
-    "116" : "COLOMBIA",
-    "117" : "ITU HQ",
-    "118" : "JAN MAYEN",
-    "120" : "ECUADOR",
-    "122" : "JERSEY",
-    "123" : "JOHNSTON I.",
-    "124" : "JUAN DE NOVA, EUROPA",
-    "125" : "JUAN FERNANDEZ IS.",
-    "126" : "KALININGRAD",
-    "129" : "GUYANA",
-    "130" : "KAZAKHSTAN",
-    "131" : "KERGUELEN IS.",
-    "132" : "PARAGUAY",
-    "133" : "KERMADEC IS.",
-    "135" : "KYRGYZSTAN",
-    "136" : "PERU",
-    "137" : "REPUBLIC OF KOREA",
-    "138" : "KURE I.",
-    "140" : "SURINAME",
-    "141" : "FALKLAND IS.",
-    "142" : "LAKSHADWEEP IS.",
-    "143" : "LAOS",
-    "144" : "URUGUAY",
-    "145" : "LATVIA",
-    "146" : "LITHUANIA",
-    "147" : "LORD HOWE I.",
-    "148" : "VENEZUELA",
-    "149" : "AZORES",
-    "150" : "AUSTRALIA",
-    "152" : "MACAO",
-    "153" : "MACQUARIE I.",
-    "157" : "NAURU",
-    "158" : "VANUATU",
-    "159" : "MALDIVES",
-    "160" : "TONGA",
-    "161" : "MALPELO I.",
-    "162" : "NEW CALEDONIA",
-    "163" : "PAPUA NEW GUINEA",
-    "165" : "MAURITIUS",
-    "166" : "MARIANA IS.",
-    "167" : "MARKET REEF",
-    "168" : "MARSHALL IS.",
-    "169" : "MAYOTTE",
-    "170" : "NEW ZEALAND",
-    "171" : "MELLISH REEF",
-    "172" : "PITCAIRN I.",
-    "173" : "MICRONESIA",
-    "174" : "MIDWAY I.",
-    "175" : "FRENCH POLYNESIA",
-    "176" : "FIJI",
-    "177" : "MINAMI TORISHIMA",
-    "179" : "MOLDOVA",
-    "180" : "MOUNT ATHOS",
-    "181" : "MOZAMBIQUE",
-    "182" : "NAVASSA I.",
-    "185" : "SOLOMON IS.",
-    "187" : "NIGER",
-    "188" : "NIUE",
-    "189" : "NORFOLK I.",
-    "190" : "SAMOA",
-    "191" : "NORTH COOK IS.",
-    "192" : "OGASAWARA",
-    "195" : "ANNOBON I.",
-    "197" : "PALMYRA & JARVIS IS.",
-    "199" : "PETER 1 I.",
-    "201" : "PRINCE EDWARD & MARION IS.",
-    "202" : "PUERTO RICO",
-    "203" : "ANDORRA",
-    "204" : "REVILLAGIGEDO",
-    "205" : "ASCENSION I.",
-    "206" : "AUSTRIA",
-    "207" : "RODRIGUEZ I.",
-    "209" : "BELGIUM",
-    "211" : "SABLE I.",
-    "212" : "BULGARIA",
-    "213" : "SAINT MARTIN",
-    "214" : "CORSICA",
-    "215" : "CYPRUS",
-    "216" : "SAN ANDRES & PROVIDENCIA",
-    "217" : "SAN FELIX & SAN AMBROSIO",
-    "219" : "SAO TOME & PRINCIPE",
-    "221" : "DENMARK",
-    "222" : "FAROE IS.",
-    "223" : "ENGLAND",
-    "224" : "FINLAND",
-    "225" : "SARDINIA",
-    "227" : "FRANCE",
-    "230" : "FEDERAL REPUBLIC OF GERMANY",
-    "232" : "SOMALIA",
-    "233" : "GIBRALTAR",
-    "234" : "SOUTH COOK IS.",
-    "235" : "SOUTH GEORGIA I.",
-    "236" : "GREECE",
-    "237" : "GREENLAND",
-    "238" : "SOUTH ORKNEY IS.",
-    "239" : "HUNGARY",
-    "240" : "SOUTH SANDWICH IS.",
-    "241" : "SOUTH SHETLAND IS.",
-    "242" : "ICELAND",
-    "245" : "IRELAND",
-    "246" : "SOVEREIGN MILITARY ORDER OF MALTA",
-    "247" : "SPRATLY IS.",
-    "248" : "ITALY",
-    "249" : "ST. KITTS & NEVIS",
-    "250" : "ST. HELENA",
-    "251" : "LIECHTENSTEIN",
-    "252" : "ST. PAUL I.",
-    "253" : "ST. PETER & ST. PAUL ROCKS",
-    "254" : "LUXEMBOURG",
-    "256" : "MADEIRA IS.",
-    "257" : "MALTA",
-    "259" : "SVALBARD",
-    "260" : "MONACO",
-    "262" : "TAJIKISTAN",
-    "263" : "NETHERLANDS",
-    "265" : "NORTHERN IRELAND",
-    "266" : "NORWAY",
-    "269" : "POLAND",
-    "270" : "TOKELAU IS.",
-    "272" : "PORTUGAL",
-    "273" : "TRINDADE & MARTIM VAZ IS.",
-    "274" : "TRISTAN DA CUNHA & GOUGH I.",
-    "275" : "ROMANIA",
-    "276" : "TROMELIN I.",
-    "277" : "ST. PIERRE & MIQUELON",
-    "278" : "SAN MARINO",
-    "279" : "SCOTLAND",
-    "280" : "TURKMENISTAN",
-    "281" : "SPAIN",
-    "282" : "TUVALU",
-    "283" : "UK SOVEREIGN BASE AREAS ON CYPRUS",
-    "284" : "SWEDEN",
-    "285" : "VIRGIN IS.",
-    "286" : "UGANDA",
-    "287" : "SWITZERLAND",
-    "288" : "UKRAINE",
-    "289" : "UNITED NATIONS HQ",
-    "291" : "UNITED STATES OF AMERICA",
-    "292" : "UZBEKISTAN",
-    "293" : "VIET NAM",
-    "294" : "WALES",
-    "295" : "VATICAN",
-    "296" : "SERBIA",
-    "297" : "WAKE I.",
-    "298" : "WALLIS & FUTUNA IS.",
-    "299" : "WEST MALAYSIA",
-    "301" : "W. KIRIBATI (GILBERT IS. )",
-    "302" : "WESTERN SAHARA",
-    "303" : "WILLIS I.",
-    "304" : "BAHRAIN",
-    "305" : "BANGLADESH",
-    "306" : "BHUTAN",
-    "308" : "COSTA RICA",
-    "309" : "MYANMAR",
-    "312" : "CAMBODIA",
-    "315" : "SRI LANKA",
-    "318" : "CHINA",
-    "321" : "HONG KONG",
-    "324" : "INDIA",
-    "327" : "INDONESIA",
-    "330" : "IRAN",
-    "333" : "IRAQ",
-    "336" : "ISRAEL",
-    "339" : "JAPAN",
-    "342" : "JORDAN",
-    "344" : "DEMOCRATIC PEOPLE'S REP. OF KOREA",
-    "345" : "BRUNEI DARUSSALAM",
-    "348" : "KUWAIT",
-    "354" : "LEBANON",
-    "363" : "MONGOLIA",
-    "369" : "NEPAL",
-    "370" : "OMAN",
-    "372" : "PAKISTAN",
-    "375" : "PHILIPPINES",
-    "376" : "QATAR",
-    "378" : "SAUDI ARABIA",
-    "379" : "SEYCHELLES",
-    "381" : "SINGAPORE",
-    "382" : "DJIBOUTI",
-    "384" : "SYRIA",
-    "386" : "TAIWAN",
-    "387" : "THAILAND",
-    "390" : "TURKEY",
-    "391" : "UNITED ARAB EMIRATES",
-    "400" : "ALGERIA",
-    "401" : "ANGOLA",
-    "402" : "BOTSWANA",
-    "404" : "BURUNDI",
-    "406" : "CAMEROON",
-    "408" : "CENTRAL AFRICA",
-    "409" : "CAPE VERDE",
-    "410" : "CHAD",
-    "411" : "COMOROS",
-    "412" : "REPUBLIC OF THE CONGO",
-    "414" : "DEMOCRATIC REPUBLIC OF THE CONGO",
-    "416" : "BENIN",
-    "420" : "GABON",
-    "422" : "THE GAMBIA",
-    "424" : "GHANA",
-    "428" : "COTE D'IVOIRE",
-    "430" : "KENYA",
-    "432" : "LESOTHO",
-    "434" : "LIBERIA",
-    "436" : "LIBYA",
-    "438" : "MADAGASCAR",
-    "440" : "MALAWI",
-    "442" : "MALI",
-    "444" : "MAURITANIA",
-    "446" : "MOROCCO",
-    "450" : "NIGERIA",
-    "452" : "ZIMBABWE",
-    "453" : "REUNION I.",
-    "454" : "RWANDA",
-    "456" : "SENEGAL",
-    "458" : "SIERRA LEONE",
-    "460" : "ROTUMA I.",
-    "462" : "SOUTH AFRICA",
-    "464" : "NAMIBIA",
-    "466" : "SUDAN",
-    "468" : "SWAZILAND",
-    "470" : "TANZANIA",
-    "474" : "TUNISIA",
-    "478" : "EGYPT",
-    "480" : "BURKINA FASO",
-    "482" : "ZAMBIA",
-    "483" : "TOGO",
-    "489" : "CONWAY REEF",
-    "490" : "BANABA I. (OCEAN I.)",
-    "492" : "YEMEN",
-    "497" : "CROATIA",
-    "499" : "SLOVENIA",
-    "501" : "BOSNIA-HERZEGOVINA",
-    "502" : "MACEDONIA",
-    "503" : "CZECH REPUBLIC",
-    "504" : "SLOVAK REPUBLIC",
-    "505" : "PRATAS I.",
-    "506" : "SCARBOROUGH REEF",
-    "507" : "TEMOTU PROVINCE",
-    "508" : "AUSTRAL I.",
-    "509" : "MARQUESAS IS.",
-    "510" : "PALESTINE",
-    "511" : "TIMOR-LESTE",
-    "512" : "CHESTERFIELD IS.",
-    "513" : "DUCIE I.",
-    "514" : "MONTENEGRO",
-    "515" : "SWAINS I.",
-    "516" : "SAINT BARTHELEMY",
-    "517" : "CURACAO",
-    "518" : "ST MAARTEN",
-    "519" : "SABA & ST. EUSTATIUS",
-    "520" : "BONAIRE",
-    "521" : "SOUTH SUDAN (REPUBLIC OF)",
-    "522" : "REPUBLIC OF KOSOVO",
-    }
-
 #
 #Rather than maintaining a table of DXCC_Entity_Code_Enumeration to
 #Primary_Administrative_Subdivision_Enumeration_NNN links, allow the
@@ -3525,6 +3509,8 @@ QSO_Upload_Status_Enumeration = {
     "N" : "do not upload the QSO to the online service",
     "M" : "the QSO has been modified since being uploaded to the online service"
 }
+
+Secondary_Administrative_Subdivision_Enumeration = "TBS"
 
 Enumeration_for_US_Counties_DXCC_Entity_Code_6 = {
     "AK,Aleutians East" : ("Aleutians East", "Alaska Third Judicial District"),
@@ -3617,7 +3603,7 @@ def Boolean(test):
         (test, str),
     ))
 
-    if rf.fullmatch(r'[YN]', test, flags=re.I):
+    if re.fullmatch(r'[YN]', test, flags=re.I):
         return("")
 
     return("""
@@ -3643,7 +3629,7 @@ def Digit(test):
         (test, str),
     ))
 
-    if rf.fullmatch(r'[0-9]', test):
+    if re.fullmatch(r'[0-9]', test):
         return("")
 
     return("""
@@ -3670,7 +3656,7 @@ def Integer(test):
         (test, str),
     ))
 
-    if rf.fullmatch(r'-?\d+', test):
+    if re.fullmatch(r'-?\d+', test):
         return("")
 
     return("""
@@ -3700,7 +3686,7 @@ def PositiveInteger(test):
         (test, str),
     ))
 
-    if not rf.fullmatch(r'\d+', test):
+    if not re.fullmatch(r'\d+', test):
         #
         #Incorrect format
         #
@@ -3744,7 +3730,7 @@ def Number(test):
         (test, str),
     ))
 
-    if rf.fullmatch(r'-?(\.\d+)|(\d+\.?\d*)', test):
+    if re.fullmatch(r'-?(\.\d+)|(\d+\.?\d*)', test):
         return("")
 
     return("""
@@ -3773,7 +3759,7 @@ def Character(test):
         (test, str),
     ))
 
-    if rf.fullmatch(r'[\ -~]', test):
+    if re.fullmatch(r'[\ -~]', test):
         return("")
 
     return("""
@@ -3999,7 +3985,7 @@ def Date(test):
         #
         #Make sure month is in range
         #
-        if (month < 1) or (month > 12):
+        if (int(month) < 1) or (int(month) > 12):
             errors += """
     ADIF date's month is zero of greater than 12: "{}"
 """.format(month)
@@ -4007,8 +3993,8 @@ def Date(test):
         #
         #Make sure day is in range
         #
-        max_day = calendar.monthrange(int(year), int(month))
-        if (int(day) < 1) or (int(day) > maxday):
+        (day_of_week, max_day) = calendar.monthrange(int(year), int(month))
+        if (int(day) < 1) or (int(day) > max_day):
             errors += """
     ADIF date's day is zero or greater than the days in the month.
     {}/{} has {} days, {} was specified.
@@ -4051,7 +4037,7 @@ def Time(test):
         #
         #Get hour, minute and [maybe] seond and validate
         #
-        (hour, minute, second) = ymd[0]
+        (hour, minute, second) = hms[0]
 
         #
         #Make sure hour is in range
@@ -4715,10 +4701,15 @@ def WWFFRef(test):
 ########################################################################
 
 #
-#Valid data types which contain the function to verify the data
-#types [0] and the data type indicator [1]. Data type indicator is None
-#if no data type indicator.
+#Valid data types which contain data type indicator [0] or "" if no
+#indicator and the data type validation routine [1].
 #
+#Enumeration type validation routine is None because enumeration fields
+#are unique and have to be checked by unique functions (see
+#record_fields).
+#
+DATA_TYPES_INDICATOR_INDEX = 0
+DATA_TYPES_VALIDATOR_INDEX = 1
 
 data_types = {
     "AwardList" : ("", AwardList),
@@ -5006,7 +4997,7 @@ def dictonary_duplicates(dictonary):
     #
     return(errors)
 
-def get_dti(dti):
+def get_data_type_indicator(dti):
     """
     Return character (or null string) that identifies the data type
 
@@ -5021,7 +5012,7 @@ def get_dti(dti):
     """
 
     validate_arg_type((
-        (dti, tuple, type(get_dti)),
+        (dti, tuple, type(get_data_type_indicator)),
     ))
 
     if callable(dti):
@@ -5089,7 +5080,7 @@ SevereError: In hamlib.py, {0} field "{1}" has
 #
 if lib_errors:
     print(lib_errors)
-    sys.exit(1)
+    raise HamlibError("Data type not found")
 
 ########################################################################
 ########################################################################
@@ -5099,12 +5090,12 @@ if lib_errors:
 ########################################################################
 ########################################################################
 
-def get_input(prompt_help, prompt, default=None, can_exit=True):
+def get_input(prompt_help, prompt, default=None, exit_ok=True):
     """
     Get input string from console.
 
     If "HELP" is typed, print <script_name>.help file, if one exists.
-    If "EXIT" is typed and "can_exit" is True, exit the program.
+    If "EXIT" is typed and "exit_ok" is True, exit the program.
         Otherwise print message that the program cannot be exited and
         reprint the prompt.
     If "?" is typed, print specific help text for this question, if it
@@ -5127,7 +5118,7 @@ def get_input(prompt_help, prompt, default=None, can_exit=True):
                 again if just <Enter> ("") is pressed.
             string:
                 String to return if just <Enter> ("") is pressed.
-        can_exit: Default True
+        exit_ok: Default True
             True:
                 Exit the program if "EXIT" is typed.
             False:
@@ -5141,7 +5132,7 @@ def get_input(prompt_help, prompt, default=None, can_exit=True):
         (prompt_help, str),
         (prompt, str),
         (default, str, None),
-        (can_exit, bool),
+        (exit_ok, bool),
     ))
 
     while(True):
@@ -5168,7 +5159,7 @@ def get_input(prompt_help, prompt, default=None, can_exit=True):
         #If we can exit at this point and "EXIT" entered, exit
         #
         if text.upper() == "EXIT":
-            if can_exit:
+            if exit_ok:
                 sys.exit(0)
             else:
                 print("Cannot exit at this point.\n\n")
@@ -5195,7 +5186,7 @@ Type "HELP" for more information.
     return(text)
 
 
-def get_yes_no(prompt_help, prompt, default="Y", can_exit=True):
+def get_yes_no(prompt_help, prompt, default="Y", exit_ok=True):
     """
     Print prompt that requires a Y or N answer.
 
@@ -5213,7 +5204,7 @@ def get_yes_no(prompt_help, prompt, default="Y", can_exit=True):
                     Deafult answer to the question is "Yes".
                 "N":
                     Deafult answer to the question is "No".
-        can_exit: Default True
+        exit_ok: Default True
             True:
                 Exit the program if "EXIT" is typed.
             False:
@@ -5229,7 +5220,7 @@ def get_yes_no(prompt_help, prompt, default="Y", can_exit=True):
         (prompt_help, str),
         (prompt, str),
         (default, str, None),
-        (can_exit, bool),
+        (exit_ok, bool),
     ))
 
     #
@@ -5257,9 +5248,8 @@ def get_yes_no(prompt_help, prompt, default="Y", can_exit=True):
         print("""
 SeverError: Default supplied for get_yes_no was "{}".
             It must be "Y", "N" or None.
-""".format(default)
-    + generate_stack_trace(2))
-        sys.exit(1)
+""".format(default))
+        raise HamlibError("Yes/no default was not valid")
 
     #
     #Keep trying until you get a "Y", "N" or
@@ -5273,7 +5263,7 @@ SeverError: Default supplied for get_yes_no was "{}".
         answer = get_input(prompt_help,
             prompt.rstrip() + default_prompt[default],
             default=default,
-            can_exit=can_exit).upper()
+            exit_ok=exit_ok).upper()
 
         #
         #At this point we have input. Let's hope it's a "Y" or "N" after
@@ -5336,7 +5326,9 @@ def valid_callsign(callsign, slash=False):
     ))
 
     if slash:
-        if not re.fullmatch(r'[A-Z0-9]{3,}(/[A-Z0-9]+|$)', callsign):
+        if not re.fullmatch(r'[A-Z0-9]{3,}(/[A-Z0-9]+|$)',
+            callsign,
+            re.IGNORECASE):
             #
             #If an error is found, report it
             #
@@ -5347,7 +5339,9 @@ Error: "{}" is not a valid format for a callsign.
        Examples: "K0RLO", "W1JU" or "K0RLO/R1", "W1JU/MOBILE"
 """.format(callsign))
     else:
-        if not re.fullmatch(r'[A-Z0-9]{3,}', callsign):
+        if not re.fullmatch(r'[A-Z0-9]{3,}',
+            callsign,
+            re.IGNORECASE):
             #
             #If an error is found, report it
             #
@@ -5358,7 +5352,7 @@ Error: "{}" is not a valid format for a callsign. It must be three or
 """.format(callsign))
 
     #
-    #It's a correctly formatted callsign, return false.
+    #It's a correctly formatted callsign, return false./null string
     #
     return("")
 
@@ -5531,7 +5525,7 @@ def ADIF_record(fields, spaces=0, include_data_type=False):
         #
         #Generate data type identifier if reqested
         #
-        dti = get_dti(record_fields[field_name]) if include_data_type else ""
+        dti = get_data_type_indicator(record_fields[field_name]) if include_data_type else ""
 
         #
         #Add field to record
@@ -5551,7 +5545,7 @@ def ADIF_record(fields, spaces=0, include_data_type=False):
         print("""
 SevereError: Errors were found with the following ADIF record fields:
 """ + errors)
-        sys.exit(1)
+        raise HamlibError("ADIF record (QSO) field(s) in error.")
 
     #
     #Return the correctly formatted record with an <EOR> and newline at
@@ -5567,38 +5561,91 @@ def ADIF_header(fields, header_comment="", include_data_type=False):
     Arguments:
         fields:
             Dictonary of fields and their contents.
+            Set this to None if you wish hamlibIO to auto-populate the
+            header with defaults.
+        header_comments:
+            Comments to be included at the start of the file. Let this
+            deafult to "" if you wish hamlibIO to auto-populate the
+            header comments.
+            Se it to None if you do not want ANY header.
         include_data_type: Default: False
-            If True, include data type in data specifier.
+            If True, include data type identifier in data specifier.
 
     Returns:
         Correctly formatted ADIF record with <EOR>\n at end
     """
 
     validate_arg_type((
-        (fields, dict),
-        (header_comment, str),
+        (fields, dict, None),
+        (header_comment, str, None),
         (include_data_type, bool),
     ))
 
-    #
-    #Get the current Zulu for header timestamp and generate file comment
-    #
-    zulu = time.gmtime()
-    zdate = time.strftime("%Y-%m-%d", zulu)
-    ztime = time.strftime("%H:%M:%S Zulu", zulu)
-
-    adif_header = "Generated on {} at {} ".format(zdate, ztime) \
-        + header_comment.strip() + "\n\n"
+    gmt = time.gmtime()
 
     #
-    #Set the ADIF version to the version supported by this file unless
-    #the user has defined it.
+    #Generate file header, using what's passed to the function or
+    #generating a default.
+    #
+    if header_comment is not None:
+        if header_comment:
+            #
+            #Use supplied header
+            #
+            adif_header = header_comment.strip()
+        else:
+            #
+            #Generate default header
+            #
+            adif_header = \
+                "Generated by {} (using hamlibIO.py) at {}".format(
+                    script_name,
+                    time.strftime("%Y-%m-%d %H:%M:%S GMT", gmt))
+
+        adif_header += "\n\n"
+    else:
+        #
+        #No header specifically requested
+        #
+        adif_header = ""
+
+    #
+    #User allowed all fields to default. Note that PROGRAMVERSION will
+    #not be defined since there's no way to determine that.
+    #
+    if fields is None:
+        fields = {}
+
+    #
+    #Set ADIF_VER to the version supported by this file unless the user
+    #has defined it.
     #
     for i in fields:
-        if i.upper() == ADIF_VERSION_FIELD:
+        if i.upper() == ADIF_VER_FIELD:
             break
     else:
-        fields[ADIF_VERSION_FIELD] = ADIF_VERSION
+        fields[ADIF_VER_FIELD] = ADIF_VER
+
+    #
+    #Set CREATED_TIMESTAMP to current zulu time unless the user has
+    #defined it.
+    #
+    for i in fields:
+        if i.upper() == CREATED_TIMESTAMP_FIELD:
+            break
+    else:
+        fields[CREATED_TIMESTAMP_FIELD] = \
+            time.strftime("%Y%m%d %H%M%S", gmt)
+
+    #
+    #Set PROGRAMID to the current script name unless the user has
+    #defined it.
+    #
+    for i in fields:
+        if i.upper() == PROGRAMID_FIELD:
+            break
+    else:
+        fields[PROGRAMID_FIELD] = script_name
 
     #
     #Generate fields in sorted order
@@ -5617,7 +5664,7 @@ def ADIF_header(fields, header_comment="", include_data_type=False):
         if errors:
             continue
 
-        dti = get_dti(header_fields[field_name])  if include_data_type else ""
+        dti = get_data_type_indicator(header_fields[field_name]) if include_data_type else ""
 
         #
         #Add field to header
@@ -5637,7 +5684,7 @@ def ADIF_header(fields, header_comment="", include_data_type=False):
         print("""
 SevereError: Errors were found with the following ADIF header fields:
 """ + errors)
-        sys.exit(1)
+        raise HamlibError("ADIF header field(s) in error.")
 
     #
     #Return the correctly formatted record with an <EOH> and newline at
@@ -5671,9 +5718,9 @@ def freq_to_band(freq):
     #
     #Go through bands and check to see if frequency in range
     #
-    for band in band_enumeration:
-        if ((float_freq >= band_enumeration[band][0]) and
-            (float_freq <= band_enumeration[band][1])):
+    for band in Band_Enumeration:
+        if ((float_freq >= Band_Enumeration[band][BAND_ENUMERATION_LOWER_FREQ_INDEX]) and
+            (float_freq <= Band_Enumeration[band][BAND_ENUMERATION_UPPER_FREQ_INDEX])):
             #
             #Frequency in range, return band
             #
@@ -5718,29 +5765,23 @@ def valid_band(band):
     Examples: "20M" or "20M 40M".
 """)
 
-    #
-    #No bands
-    #
-    band_list = []
-
-    for index in range(len(bands)):
+    errors = ""
+    for band_test in bands:
         #
         #If it's not a valid band, return false
         #
-        if bands[index] not in band_enumeration:
-            return("""
+        if band_test.upper() not in Band_Enumeration:
+            errors += """
     "{}" does not fall within a known band.
-""".format(bands[index]))
+""".format(band_test)
 
-        #
-        #It's a valid band, save it
-        #
-        band_list.append(bands[index])
+    if errors:
+        return(errors)
 
     #
     #Retrun xmit and recv band(s)
     #
-    return(band_list)
+    return(bands)
 
 def valid_frequency(freq):
     """
@@ -5872,8 +5913,8 @@ def valid_mode(mode_submode):
         #We've specified both a mode and submode, assure that they are
         #valid and compatible
         #
-        if mode_text.upper() in Mode_enumeration:
-            if submode_text.upper() in Mode_enumeration[mode_text.upper()]:
+        if mode_text.upper() in Mode_Enumeration:
+            if submode_text.upper() in Mode_Enumeration[mode_text.upper()]:
                 #
                 #Mode and submode are consistent
                 #
@@ -5886,7 +5927,7 @@ def valid_mode(mode_submode):
 Error: Submode "{}" specified for mode "{}".
        that is an invalid submode. Submode must be one of the following:
        "{}"
-""".format(mode_text, '", "'.join(Mode_enumeration[mode_text.upper()])))
+""".format(mode_text, '", "'.join(Mode_Enumeration[mode_text.upper()])))
         else:
             #
             #Not a valid mode, report error
@@ -5894,12 +5935,12 @@ Error: Submode "{}" specified for mode "{}".
             return("""
 Error: "{}" is an invalid mode. It must be one of the following:
        "{}"
-""".format(mode_text, '", "'.join(Mode_enumeration)))
+""".format(mode_text, '", "'.join(Mode_Enumeration)))
 
     #
     #Only a mode or submode specified, validate
     #
-    if mode_text.upper() in Mode_enumeration:
+    if mode_text.upper() in Mode_Enumeration:
         #
         #Only a mode was specified, just return a mode
         #
@@ -5908,18 +5949,16 @@ Error: "{}" is an invalid mode. It must be one of the following:
     #
     #See if a valid submode specified alone
     #
-    if mode_text.upper() in Submode_enumeration:
+    if mode_text.upper() in Submode_Enumeration:
         #
         #Only a submode was specified, return both a mode and submode.
         #
-        return(Submode_enumeration[mode_text.upper()], mode_text.upper())
+        return(Submode_Enumeration[mode_text.upper()], mode_text.upper())
 
-        #
-        #Mode incorrect for submode specified
-        #
-        return("""
+    #
+    #Mode incorrect for submode specified
+    #
+    return("""
 Error: "{}" is an invalid mode or submode.
    Examples: "CW", "LSB" "SSB USB" or "JT9 JT9H FAST".
 """.format(mode_text))
-
-
