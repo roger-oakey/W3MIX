@@ -1,0 +1,239 @@
+#!/usr/bin/python3
+
+########################################################################
+########################################################################
+####
+#### Validate all functions and error detection in hamlibIO.py
+####
+########################################################################
+########################################################################
+
+####
+#### Import support modules
+####
+
+import hamlibIO
+import re
+import sys
+
+####
+#### Global definitions
+####
+
+a_string = "test"
+a_tuple = ("t", "e", "s", "t")
+a_list = ["t", "e", "s", "t"]
+a_dictonary = {"t":"e", "s":"t"}
+
+####
+#### Test functions
+####
+
+def expected_exception(function, arguments):
+    try:
+        error = eval(function_under_test)(eval(test_args[0]))
+    except hamlibIO.hamlibIOerror as ex:
+        #
+        #Error correctly detected, print succcess dividing line
+        #
+        print("""
+{}{}""".format(type(ex).__name__, ex.args))
+        return True
+    except Exception as ex:
+        #
+        #Unexpected exception
+        #
+        print("""
+ValidationError: Unexpected exception raised.
+             {}{}
+""".format(type(ex).__name__, ex.args))        #
+        #Print error dividing line
+        #
+        return False
+
+    #
+    #If it was supposed to cause an exception, report
+    #
+    if test_args[1]:
+        #
+        #Error, did not result in an exception
+        #
+        print("""
+ValidationError: Exception should have been generated
+""")
+        return False
+
+
+def expected_failure(function, arguments):
+    try:
+        error = eval(function)(eval(arguments))
+
+    except Exception as ex:
+        #
+        #Unexpected exception
+        #
+        print("""
+ValidationError: Unexpected exception raised.
+             {}{}
+""".format(type(ex).__name__, ex.args))
+        return False
+
+    #
+    #Error reported should be a string
+    #
+    if isinstance(error, str) and error:
+        #
+        #We got an error string, as we should have. Print it out and
+        #the success line
+        #
+        print(error)
+        return True
+
+        #
+        #We expected an error string and instead we got something
+        #other than a string (which means it suceeded) or we got
+        #a null string (which means we suceeded). Report error
+        #
+        print("""
+ValidationError: Error string should have been reported but it wasn't.
+""")
+        #
+        #Print error dividing line
+        #
+        return False
+
+
+def expected_success(function, arguments):
+    try:
+        error = eval(function)(eval(arguments))
+
+    except Exception as ex:
+        #
+        #Unexpected exception
+        #
+        print("""
+ValidationError: Unexpected exception raised.
+             {}{}
+""".format(type(ex).__name__, ex.args))
+        return False
+
+    #
+    #Error reported will be a string
+    #
+    if isinstance(error, str) and error:
+
+        #
+        #We didn't expect to get an error but we got one. Print out the
+        #error.
+        #
+        print(error)
+        print("""
+ValidationError: No error should have been reported, but it was.
+""")
+        return False
+
+    #
+    #No error, which is correct. If it's not a string, print the
+    #structure
+    #
+    if not isinstance(error, str):
+        print(error)
+    return True
+
+tests = {
+    "010_validate_arg_type" :\
+        (
+        ("expected_exception", "a_string"),
+        ("expected_exception", "[]"),
+        ("expected_exception", "((a_string,))"),
+        ("expected_exception", "(((a_string, str), ()))"),
+        ("expected_exception", "((a_string, str, str),)"),
+        ("expected_exception", "((a_string, a_string),)"),
+        ),
+
+    "020_Boolean" :\
+        (
+        ("expected_failure", '"X"'),
+        ("expected_success", '"Y"'),
+        ("expected_success", '"y"'),
+        ("expected_success", '"N"'),
+        ("expected_success", '"n"'),
+        ),
+
+    "030_Digit" :\
+        (
+        ("expected_failure", '"X"'),
+        ),
+
+    "040_Integer" :\
+        (
+        ("expected_failure", '"+17"'),
+        ("expected_failure", '"1d"'),
+        ("expected_success", '"17"'),
+        ("expected_success", '"-17"'),
+        ),
+
+    "050_PositiveInteger" :\
+        (
+        ("expected_failure", '"0"'),
+        ("expected_failure", '"-17"'),
+        ("expected_failure", '"1d"'),
+        ("expected_success", '"17"'),
+        ),
+
+    "060_Number" :\
+        (
+        ("expected_failure", '"+17"'),
+        ("expected_failure", '"."'),
+        ("expected_failure", '"1d"'),
+        ("expected_success", '"0"'),
+        ("expected_success", '"17"'),
+        ("expected_success", '"-17"'),
+        ("expected_success", '"17.17"'),
+        ("expected_success", '"-.17"'),
+        ("expected_success", '"-17.17"'),
+        ),
+
+    "070_Character" :\
+        (
+        ("expected_failure", '""'),
+        ("expected_failure", '"17"'),
+        ("expected_failure", 'chr(ord(" ")-1)'),
+        ("expected_failure", 'chr(ord("~")+1)'),
+        ("expected_success", '" "'),
+        ("expected_success", '"~"'),
+        ),
+    }
+
+test_number = 0
+total_errors = []
+for key, arguments in sorted(tests.items()):
+    match = re.findall(r'^\d{3}_(\S+)$', key)
+    if not match:
+        print("""
+ValidationError: test name "{}" not in correct format of:
+                 NNN_function_name.
+""".format(key))
+        sys.exit(1)
+
+    function_under_test = "hamlibIO." + match[0]
+
+    if not callable(eval(function_under_test)):
+        print("""
+ValidationError: Function "{}" not callable, cannot test.
+""".format(function_under_test))
+        sys.exit(1)
+
+    for test_args in arguments:
+        test_number += 1
+        print("""
+Test {:>4}, {}: {}( {} )
+""".format(test_number, test_args[0], function_under_test, test_args[1]))
+
+        if eval(test_args[0])(function_under_test, test_args[1]):
+            print(80 * "." + "\n")
+        else:
+            print(80 * "X" + "\n")
+            total_errors.append(test_number)
+
+exit()

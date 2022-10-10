@@ -536,15 +536,23 @@ At this prompt you can do the following:
     Specify a new frequency or transmit AND receive frequency, such as
         "14.215" or "14.215 14.275"
         If you specify the frequency, the band will be correctly set.
-    Specify a new transmit power, such as "100W". Enter "0W" to stop recording
-        a transmit power.
+    Specify a new transmit power, such as "100W". Enter "0W" to stop
+        recording a transmit power.
 
     Enter a hunter contact:
-        Enter the hunter's callsign, followed by optional information in any
-        order like sent and received RSTs, hunter transmit power, park to park
-        identifier(s) and a comment enclosed in double quotes (or if the
-        comment is at the end of the line, it only has to be started with a
-        double quote - no need for a closing quote).
+        Enter the hunter's callsign, followed by optional information in
+        any order like sent and received RSTs, hunter transmit power,
+        park to park identifier(s) and a comment enclosed in double
+        quotes (or if the comment is at the end of the line, it only has
+        to be started with a double quote - no need for a closing quote).
+
+        Examples:
+            Absolute minimum, just the callsign:
+                W1JU
+            All optional information:
+                W1JU 59 57 10W "Harvey!"
+            Twofer park-to-park and all optional information:
+                W1JU "Twofer from Harvey" K-1111 K-2222 10W 59 57
 
         All optional information may be entered in ANY order.
 """

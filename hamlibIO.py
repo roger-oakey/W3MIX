@@ -44,9 +44,9 @@ adx_record  = "        <RECORD>"
 #
 #Simple hamlib.py exception to be used if error and halt
 #
-class HamlibError(Exception):
+class hamlibIOerror(Exception):
     """
-    Exception for hamlib.py so we generate a stack trace
+    Exception for hamlib.py so we generate a stack trace and exit
     """
     pass
 
@@ -191,12 +191,13 @@ def validate_arg_type(args_to_check) -> None:
             return xlate.__name__
         except:
             sys.stderr.write("""
-ArgError: Unable to translate type "{}" to string.""".format(xlate))
+Error: Unable to translate type "{}" to string.
+""".format(xlate))
 
         #
         #Don't return, throw exception to generate trace
         #
-        raise HamlibError("validate_arg_type type translation error")
+        raise hamlibIOerror("validate_arg_type type translation error")
 
     def process_type(arg_off:int,
                      type_off:int,
@@ -248,13 +249,13 @@ ArgError: Unable to translate type "{}" to string.""".format(xlate))
         #Type given is not a valid type, report error
         #
         sys.stderr.write("""
-ArgError: Element at offset {}, type offset {} is not a type or None.
+Error: Element at offset {}, type offset {} is not a type or None.
 """.format(arg_off, type_off))
 
         #
         #Don't return, throw exception to generate trace
         #
-        raise HamlibError("validate_arg_type parameter error")
+        raise hamlibIOerror("validate_arg_type parameter error")
 
     def process_var_types(arg_off:int, var_and_valid_types) -> None:
         """
@@ -263,7 +264,7 @@ ArgError: Element at offset {}, type offset {} is not a type or None.
 
         Arguments:
             arg_off:
-                Offset into argumetn list for error reporting.
+                Offset into argument list for error reporting.
             var_and_valid_types:
                 The argument to test, followed by the valid types it
                 may be. For example:
@@ -289,30 +290,30 @@ ArgError: Element at offset {}, type offset {} is not a type or None.
         #
         if not isinstance(var_and_valid_types, tuple_or_list):
             sys.stderr.write("""
-ArgError: Element at offset {} is not a tuple or list. Should be an
-          tuple or list starting with the function argument followed by
-          a list of zero or more valid types.
+Error: Element at offset {} is not a tuple or list. Should be an
+       tuple or list starting with the function argument followed by
+       a list of zero or more valid types.
 """.format(arg_off))
 
             #
             #Don't return, throw exception to generate trace
             #
-            raise HamlibError("Function argument error")
+            raise hamlibIOerror("Function argument error")
 
         #
         #If tuple or list has no entries, error
         #
         if not var_and_valid_types:
             sys.stderr.write("""
-ArgError: Element at offset {} is an empty tuple or list. Should be an
-          tuple or list starting with the function argument followed by
-          a list of zero of more valid types for that argument.
+Error: Element at offset {} is an empty tuple or list. Should be an
+       tuple or list starting with the function argument followed by
+       a list of zero of more valid types for that argument.
 """.format(arg_off))
 
             #
             #Don't return, throw exception to generate trace
             #
-            raise HamlibError("validate_arg_type parameter error")
+            raise hamlibIOerror("validate_arg_type parameter error")
 
         #
         # (arg,)
@@ -355,8 +356,8 @@ ArgError: Element at offset {} is an empty tuple or list. Should be an
                 #Report duplicate type
                 #
                 sys.stderr.write("""
-ArgError: Element at offset {} has duplicate definitions of type
-          "{}" at offsets {} and {}"
+Error: Element at offset {} has duplicate definitions of type
+       "{}" at offsets {} and {}"
 """.format(arg_off,
         type_xlate(hold_type),
         valid_types[hold_type],
@@ -365,7 +366,7 @@ ArgError: Element at offset {} has duplicate definitions of type
                 #
                 #Don't return, throw exception to generate trace
                 #
-                raise HamlibError("validate_arg_type parameter error")
+                raise hamlibIOerror("validate_arg_type parameter error")
 
             #
             #Save new type
@@ -391,8 +392,8 @@ ArgError: Element at offset {} has duplicate definitions of type
             #argument.
             #
             return("""
-ArgError: Detected invalid type "{}" at argument offset {}.
-          Must be one of: "{}"
+Error: Detected invalid type "{}" at argument offset {}.
+       Must be one of: "{}"
 """.format(type_xlate(this_arg_type),
            arg_off,
            '", "'.join(sorted(printable_types))))
@@ -416,20 +417,20 @@ ArgError: Detected invalid type "{}" at argument offset {}.
     #
     if not isinstance(args_to_check, tuple_or_list):
         sys.stderr.write("""
-ArgError: validate_arg_type must be called with a tuple or list
-          argument.""")
+Error: validate_arg_type must be called with a tuple or list
+       argument.""")
         #
         #Don't return, throw exception to generate trace
         #
-        raise HamlibError("validate_arg_type parameter error")
+        raise hamlibIOerror("validate_arg_type parameter error")
 
     if not args_to_check:
         sys.stderr.write("""
-ArgError: validate_arg_type called with empty tuple or list.""")
+Error: validate_arg_type called with empty tuple or list.""")
         #
         #Don't return, throw exception to generate trace
         #
-        raise HamlibError("validate_arg_type parameter error")
+        raise hamlibIOerror("validate_arg_type parameter error")
 
     #
     #Go through the tuple (or list) and assure each tuple consists of an
@@ -481,7 +482,7 @@ ArgError: validate_arg_type called with empty tuple or list.""")
         #
         #Don't return, throw exception to generate trace
         #
-        raise HamlibError("Bad argument type passed to function")
+        raise hamlibIOerror("Bad argument type passed to function")
 
     #
     #All arguments are valid, return
@@ -3608,7 +3609,7 @@ def Boolean(test):
 
     return("""
     ADIF boolean is "{}", but must be "Y" or "N".
-""")
+""".format(test))
 
 def Digit(test):
     """
@@ -3663,7 +3664,7 @@ def Integer(test):
     Integer "{}" does not have integer format:
     A sequence of one or more Digits representing a decimal integer,
     optionally preceded by a minus sign.  Leading zeroes are allowed.
-""")
+""".format(test))
 
 
 def PositiveInteger(test):
@@ -3695,7 +3696,7 @@ def PositiveInteger(test):
     An unsigned sequence of one or more Digits representing a decimal
     integer that has a value greater than 0.  Leading zeroes are
     allowed.
-""")
+""".format(test))
 
     if int(test) < 1:
         #
@@ -3703,7 +3704,7 @@ def PositiveInteger(test):
         #
         return("""
     Positive integer "{}" must be greater than zero.
-""")    
+""".format(test))    
 
     #
     #It's correct
@@ -3730,7 +3731,7 @@ def Number(test):
         (test, str),
     ))
 
-    if re.fullmatch(r'-?(\.\d+)|(\d+\.?\d*)', test):
+    if re.fullmatch(r'-?((\.\d+)|(\d+\.?\d*))', test):
         return("")
 
     return("""
@@ -3738,11 +3739,11 @@ def Number(test):
     A sequence of one or more Digits representing a decimal number,
     optionally preceded by a minus sign and optionally including a
     single decimal point.
-""")
+""".format(test))
 
 def Character(test):
     """
-    ADIF boolean field must be a "Y", "N", "y" or "n", error otherwise.
+    ADIF character field must be ASCII blank to "~".
 
     Arguments:
         test:
@@ -3758,13 +3759,23 @@ def Character(test):
     validate_arg_type((
         (test, str),
     ))
+    
+    if not test:
+        return("""
+    Character field contains no characters.
+""")
+
+    if len(test) > 1:
+        return("""
+    Character field was passed multiple characters: "{}"
+""".format(test))
 
     if re.fullmatch(r'[\ -~]', test):
         return("")
 
     return("""
-    Character "{}" is outside the " " to "~" (ASCII 36-126) range.
-""".format(test))
+    Character {} is outside the " " to "~" (ASCII 0x20-0x7e) range.
+""".format(hex(ord(test))))
 
 def String(test):
     """
@@ -5068,11 +5079,10 @@ for table in ("header_fields",
                 #
                 if dt not in data_types:
                     lib_errors += """
-SevereError: In hamlib.py, {0} field "{1}" has
-             a data type of "{2}" which is NOT in the
-             data_types dictonary. Either correct the
-             {0} "{1}" field datatype or add "{2}"
-             to the data_types dictonary.
+Error: In hamlib.py, {0} field "{1}" has a data type of
+       "{2}" which is NOT in the data_types dictonary.
+       Either correct the {0} "{1}" field datatype
+       or add "{2}" to the data_types dictonary.
 """.format(table, key, dt)
 
 #
@@ -5080,7 +5090,7 @@ SevereError: In hamlib.py, {0} field "{1}" has
 #
 if lib_errors:
     print(lib_errors)
-    raise HamlibError("Data type not found")
+    raise hamlibIOerror("Data type not found")
 
 ########################################################################
 ########################################################################
@@ -5246,10 +5256,10 @@ def get_yes_no(prompt_help, prompt, default="Y", exit_ok=True):
     #
     if default not in default_prompt:
         print("""
-SeverError: Default supplied for get_yes_no was "{}".
-            It must be "Y", "N" or None.
+Error: Default supplied for get_yes_no was "{}".
+       It must be "Y", "N" or None.
 """.format(default))
-        raise HamlibError("Yes/no default was not valid")
+        raise hamlibIOerror("Yes/no default was not valid")
 
     #
     #Keep trying until you get a "Y", "N" or
@@ -5543,9 +5553,9 @@ def ADIF_record(fields, spaces=0, include_data_type=False):
     #
     if errors:
         print("""
-SevereError: Errors were found with the following ADIF record fields:
+Error: Errors were found with the following ADIF record fields:
 """ + errors)
-        raise HamlibError("ADIF record (QSO) field(s) in error.")
+        raise hamlibIOerror("ADIF record (QSO) field(s) in error.")
 
     #
     #Return the correctly formatted record with an <EOR> and newline at
@@ -5682,9 +5692,9 @@ def ADIF_header(fields, header_comment="", include_data_type=False):
     #
     if errors:
         print("""
-SevereError: Errors were found with the following ADIF header fields:
+Error: Errors were found with the following ADIF header fields:
 """ + errors)
-        raise HamlibError("ADIF header field(s) in error.")
+        raise hamlibIOerror("ADIF header field(s) in error.")
 
     #
     #Return the correctly formatted record with an <EOH> and newline at
