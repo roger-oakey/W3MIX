@@ -31,7 +31,7 @@ a_dictonary = {"t":"e", "s":"t"}
 
 def expected_exception(function, arguments):
     try:
-        error = eval(function_under_test)(eval(test_args[0]))
+        error = eval(function_under_test)(eval(arguments[0]))
     except hamlibIO.hamlibIOerror as ex:
         #
         #Error correctly detected, print succcess dividing line
@@ -54,19 +54,14 @@ ValidationError: Unexpected exception raised.
     #
     #If it was supposed to cause an exception, report
     #
-    if test_args[1]:
-        #
-        #Error, did not result in an exception
-        #
-        print("""
+    print("""
 ValidationError: Exception should have been generated
 """)
-        return False
-
+    return False
 
 def expected_failure(function, arguments):
     try:
-        error = eval(function)(eval(arguments))
+        error = eval(function)(eval(arguments[0]))
 
     except Exception as ex:
         #
@@ -102,10 +97,9 @@ ValidationError: Error string should have been reported but it wasn't.
         #
         return False
 
-
 def expected_success(function, arguments):
     try:
-        error = eval(function)(eval(arguments))
+        error = eval(function)(eval(arguments[0]))
 
     except Exception as ex:
         #
@@ -140,8 +134,87 @@ ValidationError: No error should have been reported, but it was.
         print(error)
     return True
 
+def expected_data(function, arguments):
+
+    if len(arguments) < 2:
+        #
+        #No expected data passed into this function
+        #
+        print("""
+Error: No expected data passed to expected_data.
+""")
+        exit(1)
+
+    if len(arguments) > 2:
+        print("""
+Error: Only one expected data may be passed to the expected_data function.
+""")
+        exit(1)
+
+    #
+    #Try the call to the specified function
+    #
+    try:
+        data = eval(function)(eval(arguments[0]))
+
+    except Exception as ex:
+        #
+        #Unexpected exception
+        #
+        print("""
+ValidationError: Unexpected exception raised.
+             {}{}
+""".format(type(ex).__name__, ex.args))
+        return False
+
+    expected_type = type(arguments[1])
+
+    #
+    #Make sure we got back the expected data type and data value.
+    #
+    if isinstance(data, expected_type):
+        if data == arguments[1]:
+            #
+            #Data returned is expected type and data
+            #
+            return True
+        else:
+            #
+            #Data returned does not match expected data
+            #
+            print   ("""
+ValidationError: Data returned does not match data expected.
+""")
+    else:
+        #
+        #Type returned does not match type expected
+        #
+        print("""
+ValidationError: Expected type of data returned was "{}",
+                 but type "{}" was returned instead.
+""".format(hamlibIO.type_xlate(expected_type),
+    hamlibIO.type_xlate(type(data))))
+
+    #
+    #Print expected and returned data
+    #
+    print("Expected data:")
+    print(arguments[1])
+
+    print("Received data:")
+    print(data)
+
+    return False
+
 tests = {
-    "010_validate_arg_type" :\
+    "010_type_xlate" :\
+        (
+        ("expected_exception", "7"), #Not a type
+        ("expected_data", "type(None)", "None"),
+        ("expected_data", "dict", "dict"),
+        ),
+
+    "020_validate_arg_type" :\
         (
         ("expected_exception", "a_string"),
         ("expected_exception", "[]"),
@@ -151,41 +224,43 @@ tests = {
         ("expected_exception", "((a_string, a_string),)"),
         ),
 
-    "020_Boolean" :\
+    "030_Boolean" :\
         (
-        ("expected_failure", '"X"'),
+        ("expected_failure", '"X"'), #Not one of YyNn
         ("expected_success", '"Y"'),
         ("expected_success", '"y"'),
         ("expected_success", '"N"'),
         ("expected_success", '"n"'),
         ),
 
-    "030_Digit" :\
+    "040_Digit" :\
         (
-        ("expected_failure", '"X"'),
+        ("expected_failure", '"X"'), #Non-numeric
+        ("expected_success", '"0"'),
+        ("expected_success", '"9"'),
         ),
 
-    "040_Integer" :\
+    "050_Integer" :\
         (
-        ("expected_failure", '"+17"'),
-        ("expected_failure", '"1d"'),
+        ("expected_failure", '"+17"'), #+ not allowed
+        ("expected_failure", '"1d"'), #Non-numeric
         ("expected_success", '"17"'),
         ("expected_success", '"-17"'),
         ),
 
-    "050_PositiveInteger" :\
+    "060_PositiveInteger" :\
         (
-        ("expected_failure", '"0"'),
-        ("expected_failure", '"-17"'),
-        ("expected_failure", '"1d"'),
+        ("expected_failure", '"0"'), #Not positive
+        ("expected_failure", '"-17"'), #Not positive
+        ("expected_failure", '"1d"'), #Non-numeric
         ("expected_success", '"17"'),
         ),
 
-    "060_Number" :\
+    "070_Number" :\
         (
-        ("expected_failure", '"+17"'),
-        ("expected_failure", '"."'),
-        ("expected_failure", '"1d"'),
+        ("expected_failure", '"+17"'), # + not allowed
+        ("expected_failure", '"."'), #No digits
+        ("expected_failure", '"1d"'), #Non-numeric
         ("expected_success", '"0"'),
         ("expected_success", '"17"'),
         ("expected_success", '"-17"'),
@@ -194,14 +269,259 @@ tests = {
         ("expected_success", '"-17.17"'),
         ),
 
-    "070_Character" :\
+    "080_Character" :\
         (
-        ("expected_failure", '""'),
-        ("expected_failure", '"17"'),
-        ("expected_failure", 'chr(ord(" ")-1)'),
-        ("expected_failure", 'chr(ord("~")+1)'),
-        ("expected_success", '" "'),
-        ("expected_success", '"~"'),
+        ("expected_failure", '""'), #Zero length string
+        ("expected_failure", '"17"'), #More than one character
+        ("expected_failure", 'chr(ord(" ")-1)'), #0x1f
+        ("expected_failure", 'chr(ord("~")+1)'), #0x7f
+        ("expected_success", '" "'), #Bottom end of valid range
+        ("expected_success", '"~"'), #Top end of valid range
+        ),
+
+    "090_String" :\
+        (
+        ("expected_failure", 'chr(ord(" ")-1)'), #0x1f
+        ("expected_failure", 'chr(ord("~")+1)'), #0x7f
+        ("expected_failure", '""'), #Zero length string
+        ("expected_success", '" "'), #Bottom end of valid range
+        ("expected_success", '"~"'), #Top end of valid range
+        ),
+
+    "100_TBS" :\
+        (
+        ("expected_success", '"Ignored"'),
+        ),
+
+    "110_Region" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"AI"'),
+        ("expected_success", '"ai"'),
+        ),
+
+    "120_AwardList" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"DXCC"'),
+        ("expected_success", '"dxcc"'),
+        ),
+
+    "130_SponsoredAwardList" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"ARRL_"'),
+        ("expected_success", '"arrl_"'),
+        ),
+
+    "140_MultilineString" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"TEST"'),
+        ),
+
+    "150_Date" :\
+        (
+        ("expected_failure", '"1956"'),
+        ("expected_failure", '"20220000"'),
+        ("expected_failure", '"20220100"'),
+        ("expected_failure", '"20221332"'),
+        ("expected_failure", '"20220229"'),
+        ("expected_failure", '"20221032"'),
+        ("expected_success", '"20221030"'),
+        ),
+
+    "160_Time" :\
+        (
+        ("expected_failure", '"ABCDEF"'),
+        ("expected_failure", '"00"'),
+        ("expected_failure", '"00000000"'),
+        ("expected_failure", '"2400"'),
+        ("expected_failure", '"2360"'),
+        ("expected_failure", '"240000"'),
+        ("expected_failure", '"236000"'),
+        ("expected_failure", '"230060"'),
+        ("expected_failure", '"236060"'),
+        ("expected_failure", '"246060"'),
+        ("expected_success", '"0000"'),
+        ("expected_success", '"2359"'),
+        ("expected_success", '"000000"'),
+        ("expected_success", '"235959"'),
+        ),
+
+    "170_Ant_Path" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"O"'),
+        ),
+
+    "180_Location" :\
+        (
+        ("expected_failure", '"W90 00.000"'),
+        ("expected_failure", '"W090 0.000"'),
+        ("expected_failure", '"W090 00.00"'),
+        ("expected_failure", '"A000 00.000"'),
+        ("expected_failure", '"W181 60.000"'),
+        ("expected_failure", '"W180 01.000"'),
+        ("expected_failure", '"W180 00.001"'),
+        ("expected_success", '"N000 00.000"'),
+        ("expected_success", '"S180 00.000"'),
+        ("expected_success", '"E000 00.000"'),
+        ("expected_success", '"W180 00.000"'),
+        ),
+
+    #Note that "Longitude" uses "Location" so no need to repeat those
+    #tests.
+    "190_Longitude" :\
+        (
+        ("expected_failure", '"N000 00.000"'),
+        ("expected_success", '"E000 00.000"'),
+        ("expected_success", '"W180 00.000"'),
+        ),
+
+    #Note that "Latitude" uses "Location" so no need to repeat those
+    #tests.
+    "200_Latitude" :\
+        (
+        ("expected_failure", '"W000 00.000"'),
+        ("expected_failure", '"N091 00.000"'),
+        ("expected_failure", '"S090 01.000"'),
+        ("expected_failure", '"N090 00.001"'),
+        ("expected_success", '"N000 00.000"'),
+        ("expected_success", '"S090 00.000"'),
+        ),
+
+    "210_GridSquare" :\
+        (
+        ("expected_failure", '"00"'),
+        ("expected_failure", '"AS"'),
+        ("expected_failure", '"AABB"'),
+        ("expected_failure", '"AA00AY"'),
+        ("expected_failure", '"XX99YY00"'),
+        ("expected_failure", '"SSAAYYBB"'),
+        ("expected_success", '"AA"'),
+        ("expected_success", '"AA00"'),
+        ("expected_success", '"AA00AA"'),
+        ("expected_success", '"rr99xx99"'),
+        ),
+
+    "220_GridSquareList" :\
+        (
+        ("expected_failure", '"AA, BB"'),
+        ("expected_success", '"AA"'),
+        ("expected_success", '"AA,rr"'),
+        ),
+
+    "230_Arrl_Sect" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"CO"'),
+        ("expected_success", '"vt"'),
+        ),
+
+    "240_Band" :\
+        (
+        ("expected_failure", '"0M"'),
+        ("expected_success", '"1.25M"'),
+        ("expected_success", '"630m"'),
+        ),
+
+    "250_QSO_Upload_Status" :\
+        (
+        ("expected_failure", '"X"'),
+        ("expected_success", '"M"'),
+        ("expected_success", '"y"'),
+        ),
+
+    "260_Continent" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"AF"'),
+        ("expected_success", '"oc"'),
+        ),
+
+    "270_Contest" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"ARRL-10-GHZ"'),
+        ("expected_success", '"wfd"'),
+        ),
+
+    "280_CreditList" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"CQWPX"'),
+        ("expected_success", '"marathon"'),
+        ),
+
+    "290_Dxcc" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"291"'),
+        ),
+
+    "300_QSL_Rcvd" :\
+        (
+        ("expected_failure", '"T"'),
+        ("expected_success", '"Y"'),
+        ),
+
+    "310_QSL_Sent" :\
+        (
+        ("expected_failure", '"T"'),
+        ("expected_success", '"Y"'),
+        ),
+
+    "320_QSL_Via" :\
+        (
+        ("expected_failure", '"T"'),
+        ("expected_success", '"D"'),
+        ),
+
+    "330_Mode" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_success", '"SSB"'),
+        ),
+
+    "340_WWFFRef" :\
+        (
+        ("expected_failure", '"AFF-000"'),
+        ("expected_failure", '"AFF-00000"'),
+        ("expected_success", '"AFF-0000"'),
+        ("expected_success", '"ABFF-0000"'),
+        ("expected_success", '"ABCFF-0000"'),
+        ("expected_success", '"abcdFF-9999"'),
+        ),
+
+    "500_userdef" :\
+        (
+        ("expected_failure", '"USERDEF"'),
+        ("expected_failure", '"USERDEF0"'),
+        ("expected_failure", '"USERDEFX"'),
+        ("expected_success", '"USERDEF1"'),
+        ),
+
+    "510_dictonary_duplicates" :\
+        (
+        ("expected_failure", '{"AA":4, "aa":8}'),
+        ("expected_success", '{"AA":4, "BB":8}'),
+        ),
+
+    "520_get_data_type_indicator" :\
+        (
+        ("expected_data", 'hamlibIO.record_fields["ANT_AZ"]', "N"),
+        ("expected_data", 'hamlibIO.record_fields["BAND"]', "E"),
+        ),
+
+    "530_valid_callsign" :\
+        (
+        ("expected_failure", '"K0RLO/mobile"'),
+        ("expected_success", '"JY1"'),
+        ("expected_success", '"K0RLO"'),
+        ("expected_success", '"W1JU"'),
+        ("expected_success", '"VE7XYZ"'),
+        ("expected_success", '"K0RLO/mobile", slash=True'),
         ),
     }
 
@@ -230,10 +550,16 @@ ValidationError: Function "{}" not callable, cannot test.
 Test {:>4}, {}: {}( {} )
 """.format(test_number, test_args[0], function_under_test, test_args[1]))
 
-        if eval(test_args[0])(function_under_test, test_args[1]):
+        if eval(test_args[0])(function_under_test, test_args[1:]):
             print(80 * "." + "\n")
         else:
             print(80 * "X" + "\n")
-            total_errors.append(test_number)
+            total_errors.append(str(test_number))
+
+failed_tests = ", ".join(total_errors)
+if failed_tests:
+    print("Failed test numbers: " + failed_tests)
+else:
+    print("No failed tests")
 
 exit()

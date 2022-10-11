@@ -100,6 +100,48 @@ else:
 No script help file for {}.
 """.format(script_name)
 
+def type_xlate(xlate) -> str:  
+    """
+    Translate a data type to a printable string. Special check for
+    the NoneType to return "None". If error, report, dump stack and
+    halt.
+
+    Note that this function is outside the validate_arg_type function
+    just so he have access it for validation testing - so we can
+    stimulate its exception.
+
+    Arguments:
+        xlate:
+            The type to translate to a printable string.
+
+    Returns:
+        Can translate the type to a printable string:
+            A text string of the type.
+        nable to translate the type to a printable string:
+            Print the error, the stack and exit.
+    """ 
+
+    #
+    #Special check to return "None" for "NoneType"
+    #
+    if xlate is type(None):
+        return "None"
+
+    #
+    #Try and translate type to string
+    #
+    try:
+        return xlate.__name__
+    except:
+        sys.stderr.write("""
+Error: Unable to translate type "{}" to string.
+""".format(xlate))
+
+    #
+    #Don't return, throw exception to generate trace
+    #
+    raise hamlibIOerror("validate_arg_type type translation error")
+
 def validate_arg_type(args_to_check) -> None:
     """
     Check arguments against valid type(s).
@@ -160,44 +202,6 @@ def validate_arg_type(args_to_check) -> None:
         Any arg types invalid or table malformed:
             Prints the error(s), the stack trace and exits.
     """
-
-    def type_xlate(xlate) -> str:  
-        """
-        Translate a data type to a printable string. Special check for
-        the NoneType to return "None". If error, report, dump stack and
-        halt.
-
-        Arguments:
-            xlate:
-                The type to translate to a printable string.
-
-        Returns:
-            Can translate the type to a printable string:
-                A text string of the type.
-            nable to translate the type to a printable string:
-                Print the error, the stack and exit.
-        """ 
-
-        #
-        #Special check to return "None" for "NoneType"
-        #
-        if xlate is type(None):
-            return "None"
-
-        #
-        #Try and translate type to string
-        #
-        try:
-            return xlate.__name__
-        except:
-            sys.stderr.write("""
-Error: Unable to translate type "{}" to string.
-""".format(xlate))
-
-        #
-        #Don't return, throw exception to generate trace
-        #
-        raise hamlibIOerror("validate_arg_type type translation error")
 
     def process_type(arg_off:int,
                      type_off:int,
@@ -594,7 +598,7 @@ ARRL_Section_Enumeration = {
 
     }
 
-Award_Ennumeration = (
+Award_Enumeration = (
     "AJA",
     "CQDX",
     "CQDXFIELD",
@@ -910,7 +914,7 @@ CREDIT_ENUMERATION_SPONSOR_INDEX = 0
 CREDIT_ENUMERATION_AWARD_INDEX = 1
 CREDIT_ENUMERATION_FACET_INDEX = 2
 
-Credit_Ennumeration = {
+Credit_Enumeration = {
     "CQDX" : ("CQ Magazine", "DX", "Mixed"),
     "CQDX_BAND" : ("CQ Magazine", "DX", "Band"),
     "CQDX_MODE" : ("CQ Magazine", "DX", "Mode"),
@@ -3604,7 +3608,7 @@ def Boolean(test):
         (test, str),
     ))
 
-    if re.fullmatch(r'[YN]', test, flags=re.I):
+    if re.fullmatch(r'[YN]', test, flags=re.IGNORECASE):
         return("")
 
     return("""
@@ -3797,6 +3801,11 @@ def String(test):
         (test, str),
     ))
 
+    if not test:
+        return("""
+    Zero-length string not allowed. Must have at least one character.
+""")
+
     if re.fullmatch(r'[\ -~]+', test):
         return("")
 
@@ -3880,14 +3889,14 @@ def AwardList(test):
     for i in test.split(","):
         if i.upper() not in Award_Enumeration:
             errors += """
-    "{}" not a valid award.
+    "{}" is not a valid award.
 """.format(i)
 
     if errors:
         errors += """
     Awards must be one of:
         "{}"
-""".format(test, '"\n        "'.join(sorted(Sponsored_Award_Enumeration)))
+""".format('"\n        "'.join(sorted(Award_Enumeration)))
 
     return(errors)
 
@@ -3922,7 +3931,7 @@ def SponsoredAwardList(test):
         errors += """
     Sponsored awards must be one of:
         "{}"
-""".format(test, '"\n        "'.join(sorted(Sponsored_Award_Enumeration)))
+""".format('"\n        "'.join(sorted(Sponsored_Award_Enumeration)))
 
     return(errors)
 
@@ -4000,13 +4009,13 @@ def Date(test):
             errors += """
     ADIF date's month is zero of greater than 12: "{}"
 """.format(month)
-
-        #
-        #Make sure day is in range
-        #
-        (day_of_week, max_day) = calendar.monthrange(int(year), int(month))
-        if (int(day) < 1) or (int(day) > max_day):
-            errors += """
+        else:
+            #
+            #Month is in range, make sure day is in range
+            #
+            (day_of_week, max_day) = calendar.monthrange(int(year), int(month))
+            if (int(day) < 1) or (int(day) > max_day):
+                errors += """
     ADIF date's day is zero or greater than the days in the month.
     {}/{} has {} days, {} was specified.
 """.format(month, year, max_day, day)
@@ -4043,7 +4052,7 @@ def Time(test):
 
     errors = ""
 
-    hms = re.findall(r'(\d{2})(\d{2})(\d\d)?$', test)
+    hms = re.findall(r'^(\d{2})(\d{2})(\d{0,2})$', test)
     if hms:
         #
         #Get hour, minute and [maybe] seond and validate
@@ -4147,7 +4156,7 @@ def Location(test):
     #
     #Check ranges
     #
-    (cardinal, degrees, minutes, decimal_minutes) = loc
+    (cardinal, degrees, minutes, decimal_minutes) = loc[0]
 
     errors = ""
 
@@ -4198,15 +4207,13 @@ def Longitude(test):
     ))
 
     errors = Location(test)
-    if errors:
-        return(errors)
     
     if not re.match(r'[EW]', test):
-        return("""
+        errors += """
     For longitude, "{}" must start with "E" or "W".
-""".format(test))
+""".format(test)
 
-    return("")
+    return(errors)
 
 def Latitude(test):
     """
@@ -4244,7 +4251,11 @@ def Latitude(test):
     #check, and that passed if we're here.
     #
     (cardinal, degrees, minutes, decimal_minutes) = \
-        re.findall(r'^([NSEW])(\d{3}) (\d{2})\.(\d{3})$', test)
+        re.findall(r'^(.)(\d{3}) (\d{2})\.(\d{3})$', test)[0]
+    if int(degrees) > 90:
+        errors += """
+    "{}" degrees in "{}" (DDD in XDDD MM.MMM), is greater than 090
+""".format(degrees, test)
 
     #
     #Instead of converting to float with possible rounding errors, if
@@ -4252,13 +4263,13 @@ def Latitude(test):
     #both zero.
     #
     if (degrees == "090") and bool(int(minutes + decimal_minutes)):
-        return("""
+        errors += """
     "{}.{}" minutes in "{}" (MM.MMM in XDDD MM.MMM),
     are non-zero, but the degrees is 090 latitude, making it greater
     than 090, which is not allowed.
-""".format(minutes, decimal_minutes, test))
+""".format(minutes, decimal_minutes, test)
 
-    return("")
+    return(errors)
 
 def GridSquare(test):
     """
@@ -4291,25 +4302,25 @@ def GridSquare(test):
 """.format(test))
 
     field_verify = (
-        (r'[A-Ra-r]{2}', """
-        "{}" is not a correctly formatted Maidenhead locator.
-        The first two characters are the field encodes and each character
-        must be "A"-"R".
+        (r'[A-R]{2}', """
+    "{}" is not a correctly formatted Maidenhead locator.
+    The first two characters are the field encodes and each character
+    must be "A"-"R".
 """),
         (r'\d{2}', """
-        "{}" is not a correctly formatted Maidenhead locator.
-        The second two characters are the square encodes and must be
-        "00"-"99".
+    "{}" is not a correctly formatted Maidenhead locator.
+    The second two characters are the square encodes and must be
+    "00"-"99".
 """),
-        (r'[A-Xa-x]{2}', """
-        "{}" is not a correctly formatted Maidenhead locator.
-        The third two characters are the subsquare encodes and each
-        character must be "a"-"x".
+        (r'[A-X]{2}', """
+    "{}" is not a correctly formatted Maidenhead locator.
+    The third two characters are the subsquare encodes and each
+    character must be "a"-"x".
 """),
         (r'\d{2}', """
-        "{}" is not a correctly formatted Maidenhead locator.
-        The fourth two characters are the extended square encodes and must
-        be "00"-"99".
+    "{}" is not a correctly formatted Maidenhead locator.
+    The fourth two characters are the extended square encodes and must
+    be "00"-"99".
 """)
         )
 
@@ -4322,7 +4333,8 @@ def GridSquare(test):
     #For all fields present, assure their format is correct
     #
     for i in range(len(fields)):
-        if not re.fullmatch(field_verify[i][0], fields[i]):
+        if not re.fullmatch(field_verify[i][0], fields[i],
+            flags=re.IGNORECASE):
             errors += field_verify[i][1].format(test)
 
     return(errors)
@@ -4346,6 +4358,15 @@ def GridSquareList(test):
     validate_arg_type((
         (test, str),
     ))
+
+    #
+    #Make sure there's no blanks in the list
+    #
+    if re.search(r'\s', test):
+        return("""
+    The GridSquareList contains blanks. It may only contain Grid Squares
+    seperated by commas.
+""")
 
     #
     #Start with no errros
@@ -4495,7 +4516,7 @@ def Contest(test):
         (test, str),
     ))
 
-    if test in Contest_ID_Enumeration:
+    if test.upper() in Contest_ID_Enumeration:
         return("")
 
     return("""
@@ -4523,16 +4544,15 @@ def CreditList(test):
         (test, str),
     ))
 
-    if (test in Credit_Ennumeration) or (test in Award_Ennumeration):
-        return("")
+    all_valid_credits = list(Credit_Enumeration) + list(Award_Enumeration)
 
-    full_list = sorted(Credit_Ennumeration.keys()) \
-        + sorted(Award_Ennumeration.keys())
+    if test.upper() in all_valid_credits:
+        return("")
 
     return("""
     "{}" not a valid contest credit, must be one of:
         "{}"
-""".format(test, '"\n        "'.join(full_list)))
+""".format(test, '"\n        "'.join(sorted(all_valid_credits))))
 
 def Dxcc(test):
     """
@@ -4553,13 +4573,29 @@ def Dxcc(test):
     validate_arg_type((
         (test, str),
     ))
+
     if test.upper() in DXCC_Entity_Code_Enumeration:
         return("")
 
+    #
+    #Convert the strings that are numbers into integers, sort, then
+    #print so they come out in a pretty order.
+    #
+    dxcc_numbers = []
+    for num in DXCC_Entity_Code_Enumeration.keys():
+        dxcc_numbers.append(int(num))
+
+    #
+    #Sort in correct numerical order and convert back into strings
+    #
+    dxcc_string = []
+    for num in sorted(dxcc_numbers):
+        dxcc_string.append("{:>5}".format('"{}"'.format(num)))
+
     return("""
     "{}" not a valid DXCC entity code, must be one of:
-        "{}"
-""".format(test, '"\n        "'.join(sorted(DXCC_Entity_Code_Enumeration.keys()))))
+        {}
+""".format(test, "\n        ".join(dxcc_string)))
 
 def QSL_Rcvd(test):
     """
@@ -4693,7 +4729,8 @@ def WWFFRef(test):
         (test, str),
     ))
 
-    if re.fullmatch(r'[A-Z0-9]{1,4}F{2}-\d{4}', test, flags=re.I):
+    if re.fullmatch(r'[A-Z0-9]{1,4}F{2}-\d{4}', test,
+        flags=re.IGNORECASE):
         return("")
 
     return("""
@@ -4722,6 +4759,8 @@ def WWFFRef(test):
 DATA_TYPES_INDICATOR_INDEX = 0
 DATA_TYPES_VALIDATOR_INDEX = 1
 
+DTI_INDEX = 0
+VALIDATION_INDEX = 1
 data_types = {
     "AwardList" : ("", AwardList),
     "CreditList" : ("", CreditList),
@@ -4941,12 +4980,12 @@ def userdef(test):
     ADIF USERDEF number "{}" invalid, it must be greater than 0:
     Specifies the name and optional enumeration or range of the nth
     user-defined field, where n is a positive integer.
-""")
+""".format(test))
     else:
         return("""
     ADIF USERDEF "{}" format invalid, it must be "USERDEFn"
     where "n" is a number greater than 0.
-""")
+""".format(test))
 
     return("")
 
