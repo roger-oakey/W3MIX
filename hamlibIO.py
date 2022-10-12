@@ -4544,15 +4544,56 @@ def CreditList(test):
         (test, str),
     ))
 
-    all_valid_credits = list(Credit_Enumeration) + list(Award_Enumeration)
+    errors = ""
+    medium = {}
+    for line in test.split(","):
+        #
+        #See if this has any QSL medium ennumerations
+        #
+        match = re.findall(r'^(.*?):(.+)$', line)
+        if match:
+            #
+            #If has medium enumerations. Split on "&" and check them.
+            #Change "line" to just the credit enumeration.
+            #
+            (line, qsl_list) = match[0]
+            bad_qsl = []
+            for qsl in qsl_list.split("&"):
+                if qsl.upper() not in QSL_Medium_Enumeration:
+                    #
+                    #Invalid QSL enumeration. Save errors for later
+                    #formatting
+                    #
+                    bad_qsl.append(qsl)
+                    medium[line] = bad_qsl
 
-    if test.upper() in all_valid_credits:
-        return("")
+        #
+        #Now check the Credit field itself.
+        #
+        if line.upper() not in Credit_Enumeration:
+            errors += """
+    "{}" is not a valid contest credit.
+""".format(line)
 
-    return("""
-    "{}" not a valid contest credit, must be one of:
+    if errors:
+        errors += """
+    Contest credits must be one of:
         "{}"
-""".format(test, '"\n        "'.join(sorted(all_valid_credits))))
+""".format('"\n        "'.join(sorted(Credit_Enumeration)))
+
+    if medium:
+        for line, qsl in sorted(medium.items()):
+            errors += """
+    Contest credit "{}" has the following invalid QSL
+        medium(s): "{}"
+""".format(line, '", "'.join(sorted(qsl)))
+
+        errors += """
+    QSL mediums must be one of:
+        "{}"
+""".format('"\n        "'.join(sorted(QSL_Medium_Enumeration)))
+
+    return(errors)
 
 def Dxcc(test):
     """
@@ -5401,7 +5442,7 @@ Error: "{}" is not a valid format for a callsign. It must be three or
 """.format(callsign))
 
     #
-    #It's a correctly formatted callsign, return false./null string
+    #It's a correctly formatted callsign, return false/null string.
     #
     return("")
 
@@ -5518,7 +5559,7 @@ def validate_field(field_definitions, field_name, field_contents):
             #
             #We never found a valid data type, report errors.
             #
-            errors += hold_errors
+            errors += hold_error
 
     #
     #Retrun errors or null string
@@ -5557,18 +5598,22 @@ def ADIF_record(fields, spaces=0, include_data_type=False):
     #Generate fields in requested order
     #
     adif_record = ""
-    errors = ""
-    for field_name,field_value in sorted(fields.items()):
-
+    errors = False
+    for field_name, field_value in sorted(fields.items()):
         #
         #Validate field and contents
         #
-        errors += validate_field(record_fields, field_name, field_value)
+        error = validate_field(record_fields, field_name, field_value)
 
         #
-        #If any errors, detected, just continue checking
+        #If any errors, detected, print and continue checking
         #
-        if errors:
+        if error:
+            errors = True
+            print("""
+Error: Errors were found with the "{}" ADIF
+       record field: "{}"
+""".format(field_name, field_value) + error)
             continue
 
         #
@@ -5585,15 +5630,17 @@ def ADIF_record(fields, spaces=0, include_data_type=False):
     #Validate dictonary and assure that no mixed-case field names cause
     #duplicates. Note errors is "" if no errors.
     #
-    errors += dictonary_duplicates(fields)
+    error = dictonary_duplicates(fields)
 
     #
     #See if any errors
     #
-    if errors:
+    if error:
         print("""
 Error: Errors were found with the following ADIF record fields:
-""" + errors)
+""" + error)
+
+    if error or errors:
         raise hamlibIOerror("ADIF record (QSO) field(s) in error.")
 
     #
@@ -5699,18 +5746,23 @@ def ADIF_header(fields, header_comment="", include_data_type=False):
     #
     #Generate fields in sorted order
     #
-    errors = ""
+    errors = False
     for field_name,field_value in sorted(fields.items()):
 
         #
         #Validate field and contents
         #
-        errors += validate_field(header_fields, field_name, field_value)
+        error = validate_field(header_fields, field_name, field_value)
 
         #
-        #If any errors, detected, just continue checking
+        #If any errors, detected, print and continue checking
         #
-        if errors:
+        if error:
+            errors = True
+            print("""
+Error: Errors were found with the "{}" ADIF
+       record field: "{}"
+""".format(field_name, field_value) + error)
             continue
 
         dti = get_data_type_indicator(header_fields[field_name]) if include_data_type else ""
@@ -5724,15 +5776,17 @@ def ADIF_header(fields, header_comment="", include_data_type=False):
     #Validate dictonary and assure that no mixed-case field names cause
     #duplicates. Note errors is "" if no errors.
     #
-    errors += dictonary_duplicates(fields)
+    error = dictonary_duplicates(fields)
 
     #
     #See if any errors
     #
-    if errors:
+    if error:
         print("""
 Error: Errors were found with the following ADIF header fields:
 """ + errors)
+
+    if error or errors:
         raise hamlibIOerror("ADIF header field(s) in error.")
 
     #

@@ -25,155 +25,181 @@ a_tuple = ("t", "e", "s", "t")
 a_list = ["t", "e", "s", "t"]
 a_dictonary = {"t":"e", "s":"t"}
 
+#
+#Simple exception to be used if error and halt
+#
+class hamlibIOvalidation(Exception):
+    """
+    Exception for hamlibIO_Validaton so we generate a stack trace and
+    exit
+    """
+    pass
+
 ####
 #### Test functions
 ####
 
-def expected_exception(function, arguments):
+def execute_function(function2test, args):
+
+    test_call = "{}({})".format(function2test, args)
     try:
-        error = eval(function_under_test)(eval(arguments[0]))
-    except hamlibIO.hamlibIOerror as ex:
-        #
-        #Error correctly detected, print succcess dividing line
-        #
-        print("""
-{}{}""".format(type(ex).__name__, ex.args))
-        return True
+        return(None, eval(test_call))
+
     except Exception as ex:
+        #
+        #Exception, return exception string
+        #
+        return("{}{}".format(type(ex).__name__, ex.args), None)
+
+def expected_noexception(function2test, args):
+
+    (exception, data) = execute_function(function2test, args)
+
+    if exception:
         #
         #Unexpected exception
         #
         print("""
 ValidationError: Unexpected exception raised.
-             {}{}
-""".format(type(ex).__name__, ex.args))        #
-        #Print error dividing line
+    {}
+""".format(exception))
+        return(True, data)
+    #
+    #Return True and data
+    #
+    return(False, data)
+
+def expected_exception(function2test, args, bitbucket):
+
+    (exception, data) = execute_function(function2test, args)
+
+    if not exception:
         #
+        #If it was supposed to cause an exception, report
+        #
+        print("""
+ValidationError: Exception should have been generated.
+    """)
         return False
 
+    if re.match(r'hamlibIOerror', exception):
+        #
+        #Correct execption returned, return True
+        #
+        print("""
+{}""".format(exception))
+        return True
+
     #
-    #If it was supposed to cause an exception, report
+    #Unexpected exception
     #
     print("""
-ValidationError: Exception should have been generated
-""")
+ValidationError: Unexpected exception raised.
+    {}
+""".format(exception))
+    #
+    #Print error dividing line
+    #
     return False
 
-def expected_failure(function, arguments):
-    try:
-        error = eval(function)(eval(arguments[0]))
+def expected_failure(function2test, args, bitbucket):
 
-    except Exception as ex:
+    (exception, data) = expected_noexception(function2test, args)
+
+    if exception:
         #
-        #Unexpected exception
+        #Not expecting an excpetion
         #
-        print("""
-ValidationError: Unexpected exception raised.
-             {}{}
-""".format(type(ex).__name__, ex.args))
-        return False
+        return(False)
 
     #
     #Error reported should be a string
     #
-    if isinstance(error, str) and error:
-        #
-        #We got an error string, as we should have. Print it out and
-        #the success line
-        #
-        print(error)
-        return True
-
-        #
-        #We expected an error string and instead we got something
-        #other than a string (which means it suceeded) or we got
-        #a null string (which means we suceeded). Report error
-        #
-        print("""
-ValidationError: Error string should have been reported but it wasn't.
-""")
-        #
-        #Print error dividing line
-        #
-        return False
-
-def expected_success(function, arguments):
-    try:
-        error = eval(function)(eval(arguments[0]))
-
-    except Exception as ex:
-        #
-        #Unexpected exception
-        #
-        print("""
-ValidationError: Unexpected exception raised.
-             {}{}
-""".format(type(ex).__name__, ex.args))
-        return False
+    if isinstance(data, str):
+        if data:
+            #
+            #We got an non-blank string, as we should have. Print it out
+            #and return True
+            #
+            print(data)
+            return True
+        else:
+            #
+            #Blank string returned, we expected something
+            #
+            print("""
+ValidationError: Error should have been returned back from
+    "{}" but it wasn't.
+""".format(function2test))
+            return False
 
     #
-    #Error reported will be a string
+    #We didn't get a string type back from function, report error
     #
-    if isinstance(error, str) and error:
+    print(data)
+    print("""
+ValidationError: "str" type should have been returned back from
+    "{}" but it wasn't, "{}" was.
+""".format(function2test, hamlibIO.type_xlate(type(data))))
+    return False
 
+def expected_success(function2test, args, bitbucket):
+
+    (exception, data) = expected_noexception(function2test, args)
+
+    if exception:
         #
-        #We didn't expect to get an error but we got one. Print out the
-        #error.
+        #Not expecting an excpetion
         #
-        print(error)
-        print("""
-ValidationError: No error should have been reported, but it was.
-""")
-        return False
+        return(False)
+    #
+    #Should see a null string
+    #
+    if isinstance(data, str):
+        if data:
+            #
+            #We should have gotten a null string back, but we didn't.
+            #Report error.
+            #
+            print(data)
+            print("""
+ValidationError: No error should have been returned back from
+    "{}" but it was.
+""".format(function2test))
+            return False
+        else:
+            #
+            #Blank string returned, which is what we expected.
+            #
+            return True
 
     #
-    #No error, which is correct. If it's not a string, print the
-    #structure
+    #We didn't get a string type back from function, report error
     #
-    if not isinstance(error, str):
-        print(error)
-    return True
+    print(data)
+    print("""
+ValidationError: "str" type should have been returned back from
+    "{}" but it wasn't, "{}" was.
+""".format(function2test, hamlibIO.type_xlate(type(data))))
+    return False
 
-def expected_data(function, arguments):
+def expected_data(function2test, args, data_expected):
 
-    if len(arguments) < 2:
+    (exception, data) = expected_noexception(function2test, args)
+
+    if exception:
         #
-        #No expected data passed into this function
+        #Not expecting an excpetion
         #
-        print("""
-Error: No expected data passed to expected_data.
-""")
-        exit(1)
+        return(False)
 
-    if len(arguments) > 2:
-        print("""
-Error: Only one expected data may be passed to the expected_data function.
-""")
-        exit(1)
-
-    #
-    #Try the call to the specified function
-    #
-    try:
-        data = eval(function)(eval(arguments[0]))
-
-    except Exception as ex:
-        #
-        #Unexpected exception
-        #
-        print("""
-ValidationError: Unexpected exception raised.
-             {}{}
-""".format(type(ex).__name__, ex.args))
-        return False
-
-    expected_type = type(arguments[1])
+    expected_type = type(data_expected)
 
     #
     #Make sure we got back the expected data type and data value.
     #
     if isinstance(data, expected_type):
-        if data == arguments[1]:
+        if data == data_expected:
             #
             #Data returned is expected type and data
             #
@@ -198,18 +224,34 @@ ValidationError: Expected type of data returned was "{}",
     #
     #Print expected and returned data
     #
-    print("Expected data:")
-    print(arguments[1])
+    print("""
+Expected data:
+{}""".format(data_expected))
 
-    print("Received data:")
-    print(data)
+    print("""
+Received data:
+""".format(data))
 
     return False
 
+#
+#Tests are created in the order of the functions in hamlibIO. The three
+#digit number at the front is to cause them to remain in the correct
+#order when sorted and the tests run.
+#
+#After the "sort number" is the name of the function in hamlibIO to
+#test. This will be extracted by this program and "eval'd" to call the
+#function.
+#
+#The value of the dictonary entry is a tuple of tuples. First argument
+#is the test routine to use, the second the argument(s) to pass to the
+#function under test and the third, if present, is the return value
+#expected, if any.
+#
 tests = {
     "010_type_xlate" :\
         (
-        ("expected_exception", "7"), #Not a type
+        ("expected_exception", '"TEST"'), #Not a type
         ("expected_data", "type(None)", "None"),
         ("expected_data", "dict", "dict"),
         ),
@@ -450,8 +492,14 @@ tests = {
     "280_CreditList" :\
         (
         ("expected_failure", '"TEST"'),
+        ("expected_failure", '"TEST:TEST"'),
+        ("expected_failure", '"WAS_SATELLITE:"'),
+        ("expected_failure", '"WAS_SATELLITE:&"'),
+        ("expected_failure", '"WAS_SATELLITE:TEST"'),
+        ("expected_failure", '"WAS_SATELLITE:LOTW&TEST"'),
         ("expected_success", '"CQWPX"'),
-        ("expected_success", '"marathon"'),
+        ("expected_success", '"WAS_SATELLITE:CARD"'),
+        ("expected_success", '"WAS_SATELLITE:CARD&LOTW"'),
         ),
 
     "290_Dxcc" :\
@@ -523,39 +571,111 @@ tests = {
         ("expected_success", '"VE7XYZ"'),
         ("expected_success", '"K0RLO/mobile", slash=True'),
         ),
+
+    "540_field" :\
+        (
+        ("expected_data", '"FOO", "BAR"', "<FOO:3>BAR"),
+        ("expected_data", '"FOO", "BAR", "S"', "<FOO:3:S>BAR"),
+        ),
+
+    "550_validate_field" :\
+        (
+        ("expected_failure", 'hamlibIO.record_fields, "TEST", "0"'),
+        ("expected_failure", 'hamlibIO.record_fields, "CQZ", "0"'),
+        ("expected_failure", 'hamlibIO.record_fields, "HRDLOG_QSO_UPLOAD_STATUS", "TEST"'),
+        ("expected_failure", 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "TEST1,TEST2"'),
+        ("expected_failure", 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "CQDX_QRP:TEST"'),
+        ("expected_failure", 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "CQDX_QRP:LOTW&TEST"'),
+        ("expected_success", 'hamlibIO.record_fields, "HRDLOG_QSO_UPLOAD_STATUS", "N"'),
+        ("expected_success", 'hamlibIO.record_fields, "CQZ", "17"'),
+        ("expected_success", 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "CQDXFIELD_SATELLITE"'),
+        ("expected_success", 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "DXCC,USACA"'),
+        ("expected_success", 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "DXCC,CQDX_QRP:LOTW&CARD"'),
+        ),
+
+    "560_ADIF_record" :\
+        (
+        ("expected_exception", '{"TEST" : "TEST"}'),
+        ("expected_exception", '{"HRDLOG_QSO_UPLOAD_STATUS" : "TEST"}'),
+        ("expected_exception", '{"CREDIT_SUBMITTED" : "CQDX_QRP:LOTW&TEST"}'),
+        ("expected_exception", '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "hRDLOG_QSO_UPLOAD_STATUS" : "Y"}'),
+        ),
     }
 
-test_number = 0
+total = 0
 total_errors = []
 for key, arguments in sorted(tests.items()):
-    match = re.findall(r'^\d{3}_(\S+)$', key)
+    #
+    #Extract the function name to test from key
+    #
+    match = re.findall(r'^(\d{3})_(\S+)$', key)
     if not match:
-        print("""
-ValidationError: test name "{}" not in correct format of:
-                 NNN_function_name.
-""".format(key))
-        sys.exit(1)
+        #
+        #No match, this is a hamlibIO_validation error, throw exception
+        #and exit.
+        #
+        msg = """test name "{}" not in correct format of NNN_function_name.""".format(key)
+        raise hamlibIOvalidation(msg)
 
-    function_under_test = "hamlibIO." + match[0]
+    (sort_num, function) = match[0]
+
+    #
+    #Build the name of the function to test in the hamlibIO module.
+    #
+    function_under_test = "hamlibIO." + function
 
     if not callable(eval(function_under_test)):
-        print("""
-ValidationError: Function "{}" not callable, cannot test.
-""".format(function_under_test))
-        sys.exit(1)
+        #
+        #The function name to test is not callable, throw exception
+        #
+        msg = """Function "{}" not callable, cannot test.""".format(function_under_test)
+        raise hamlibIOvalidation(msg)
 
+    subtest = 0
     for test_args in arguments:
-        test_number += 1
+        total += 1
+        subtest += 1
+        #
+        #Build the full call to the testing function except for the
+        #data to compare against (if any) and leave off the closing )
+        #for printing purposes (we don't want to print expected data in
+        #case it's long and complex)
+        #
+        test_call = "{}( {}( {} )".format(test_args[0],
+            "hamlibIO." + function,
+            test_args[1])
+
+        #
+        #Print the test call (without expected data) for logging purposes
+        #
+        test_number = "{}-{}".format(sort_num, subtest)
         print("""
-Test {:>4}, {}: {}( {} )
+Test {} - {}: {}( {} )
 """.format(test_number, test_args[0], function_under_test, test_args[1]))
 
-        if eval(test_args[0])(function_under_test, test_args[1:]):
+        #
+        #Always pass a third argument even if no expected data, None if
+        #no expected data
+        #
+        if len(test_args) < 3:
+            data_expected = None
+        else:
+            data_expected = test_args[2]
+
+        #
+        #Execute the test function which will call the function under
+        #test.
+        #
+        if eval(test_args[0])(function_under_test, test_args[1], data_expected):
             print(80 * "." + "\n")
         else:
             print(80 * "X" + "\n")
-            total_errors.append(str(test_number))
+            total_errors.append(test_number)
 
+#
+#Print out failed tests, if any.
+#
+print("{} tests run".format(total))
 failed_tests = ", ".join(total_errors)
 if failed_tests:
     print("Failed test numbers: " + failed_tests)
