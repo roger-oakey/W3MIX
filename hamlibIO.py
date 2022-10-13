@@ -4670,7 +4670,7 @@ def CreditList_or_AwardList(test):
         #
         for cred in sorted(bad_credit):
             errors += """
-    "{}" is not a valid contest credit.
+    "{}" is not a valid Contest Credit.
 """.format(cred)
 
         errors += """
@@ -4697,7 +4697,6 @@ def CreditList_or_AwardList(test):
         for cred in sorted(bad_anything):
             errors += """
     "{}" is not a valid Contest Credit or Award.
-        "{}"
 """.format(cred)
 
         errors += """
@@ -4984,10 +4983,10 @@ record_fields = {
     "COUNTRY" : ("String",),
     "CQZ" : ("PositiveInteger",),
     #
-    #The ADIF spec does not explicitly imply that the CREDIT_SUBMITTED
+    #The ADIF spec does not explicitly state that the CREDIT_SUBMITTED
     #or CREDIT_GRANTED fields are an enumeration type, but it certainly
     #implies it, so make it an "E" data type identifier and hope for the
-    #best
+    #best.
     #
     "CREDIT_SUBMITTED" : CreditList_or_AwardList,
     "CREDIT_GRANTED" : CreditList_or_AwardList,
@@ -5748,7 +5747,7 @@ Error: Errors were found with the "{}" ADIF
         #
         #Generate data type identifier if reqested
         #
-        dti = get_data_type_indicator(record_fields[field_name]) if include_data_type else ""
+        dti = get_data_type_indicator(record_fields[field_name.upper()]) if include_data_type else ""
 
         #
         #Add field to record
@@ -5894,7 +5893,7 @@ Error: Errors were found with the "{}" ADIF
 """.format(field_name, field_value) + error)
             continue
 
-        dti = get_data_type_indicator(header_fields[field_name]) if include_data_type else ""
+        dti = get_data_type_indicator(header_fields[field_name.upper()]) if include_data_type else ""
 
         #
         #Add field to header
@@ -5991,9 +5990,11 @@ def valid_band(band):
     #
     if len(bands) > 2:
         return("""
-    More than two bands specified. Specify a single band for
-    simplex operation, two bands - first transmit, then receive
-    ONLY for split frequency operations on different bands.
+    More than two bands specified. For simplex operation specify a
+    single band, For split frequency operations specify two bands -
+    first transmit, then receive ONLY for split frequencies on different
+    bands.
+
     Examples: "20M" or "20M 40M".
 """)
 
@@ -6042,9 +6043,10 @@ def valid_frequency(freq):
     #
     if len(freq) > 2:
         return("""
-    More than two frequencies specified. Specify a single frequency for
-    simplex operation, two frequencies - first transmit, then receive
-    for split frequency operations.
+    More than two frequencies specified. For simplex operation specify a
+    single frequency. For split frequency operations specify two
+    frequencies - first transmit, then receive.
+
     Examples: "14.200" or "14.200 14.300".
 """)
 
@@ -6159,7 +6161,7 @@ def valid_mode(mode_submode):
 Error: Submode "{}" specified for mode "{}".
        that is an invalid submode. Submode must be one of the following:
        "{}"
-""".format(mode_text, '", "'.join(Mode_Enumeration[mode_text.upper()])))
+""".format(submode_text, mode_text, '"\n       "'.join(Mode_Enumeration[mode_text.upper()])))
         else:
             #
             #Not a valid mode, report error
@@ -6167,7 +6169,7 @@ Error: Submode "{}" specified for mode "{}".
             return("""
 Error: "{}" is an invalid mode. It must be one of the following:
        "{}"
-""".format(mode_text, '", "'.join(Mode_Enumeration)))
+""".format(mode_text, '"\n       "'.join(Mode_Enumeration)))
 
     #
     #Only a mode or submode specified, validate

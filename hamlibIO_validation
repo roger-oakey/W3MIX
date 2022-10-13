@@ -108,7 +108,7 @@ def expected_failure(function2test, args, bitbucket):
 
     if exception:
         #
-        #Not expecting an excpetion
+        #Not expecting an exception
         #
         return(False)
 
@@ -149,7 +149,7 @@ def expected_success(function2test, args, bitbucket):
 
     if exception:
         #
-        #Not expecting an excpetion
+        #Not expecting an exception
         #
         return(False)
     #
@@ -189,7 +189,7 @@ def expected_data(function2test, args, data_expected):
 
     if exception:
         #
-        #Not expecting an excpetion
+        #Not expecting an exception
         #
         return(False)
 
@@ -230,7 +230,7 @@ Expected data:
 
     print("""
 Received data:
-""".format(data))
+{}""".format(data))
 
     return False
 
@@ -248,6 +248,7 @@ Received data:
 #function under test and the third, if present, is the return value
 #expected, if any.
 #
+
 tests = {
     "010_type_xlate" :\
         (
@@ -496,43 +497,60 @@ tests = {
         ("expected_failure", '"WAS_SATELLITE:"'),
         ("expected_failure", '"WAS_SATELLITE:&"'),
         ("expected_failure", '"WAS_SATELLITE:TEST"'),
+        ("expected_failure", '"WAS_SATELLITE:TEST1&TEST2"'),
         ("expected_failure", '"WAS_SATELLITE:LOTW&TEST"'),
         ("expected_success", '"CQWPX"'),
         ("expected_success", '"WAS_SATELLITE:CARD"'),
         ("expected_success", '"WAS_SATELLITE:CARD&LOTW"'),
         ),
 
-    "290_Dxcc" :\
+    "290_CreditList_or_AwardList" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_failure", '"TEST:TEST"'),
+        ("expected_failure", '"WAS_SATELLITE:"'),
+        ("expected_failure", '"WAS_SATELLITE:&"'),
+        ("expected_failure", '"WAS_SATELLITE:TEST"'),
+        ("expected_failure", '"WAS_SATELLITE:TEST1&TEST2"'),
+        ("expected_failure", '"WAS_SATELLITE:LOTW&TEST"'),
+        ("expected_success", '"CQWPX"'),
+        ("expected_success", '"WAS_SATELLITE:CARD"'),
+        ("expected_success", '"was_satellite:card&lotw&eqsl"'),
+        ("expected_success", '"DXCC"'),
+        ("expected_success", '"dxcc"'),
+        ),
+
+    "300_Dxcc" :\
         (
         ("expected_failure", '"TEST"'),
         ("expected_success", '"291"'),
         ),
 
-    "300_QSL_Rcvd" :\
+    "310_QSL_Rcvd" :\
         (
         ("expected_failure", '"T"'),
         ("expected_success", '"Y"'),
         ),
 
-    "310_QSL_Sent" :\
+    "320_QSL_Sent" :\
         (
         ("expected_failure", '"T"'),
         ("expected_success", '"Y"'),
         ),
 
-    "320_QSL_Via" :\
+    "330_QSL_Via" :\
         (
         ("expected_failure", '"T"'),
         ("expected_success", '"D"'),
         ),
 
-    "330_Mode" :\
+    "340_Mode" :\
         (
         ("expected_failure", '"TEST"'),
         ("expected_success", '"SSB"'),
         ),
 
-    "340_WWFFRef" :\
+    "350_WWFFRef" :\
         (
         ("expected_failure", '"AFF-000"'),
         ("expected_failure", '"AFF-00000"'),
@@ -599,17 +617,71 @@ tests = {
         ("expected_exception", '{"HRDLOG_QSO_UPLOAD_STATUS" : "TEST"}'),
         ("expected_exception", '{"CREDIT_SUBMITTED" : "CQDX_QRP:LOTW&TEST"}'),
         ("expected_exception", '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "hrdlog_qso_upload_status" : "Y"}'),
+        ("expected_data", '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}', "<HRDLOG_QSO_UPLOAD_STATUS:1>N<call:5>K0RLO<EOR>\n"),
+        ("expected_data", '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}, spaces=2', "<HRDLOG_QSO_UPLOAD_STATUS:1>N  <call:5>K0RLO  <EOR>\n"),
+        ("expected_data", '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}, spaces=1, include_data_type=True',
+            "<HRDLOG_QSO_UPLOAD_STATUS:1:E>N <call:5:S>K0RLO <EOR>\n"),
         ),
 
     "570_ADIF_header" :\
         (
         ("expected_exception", '{"TEST" : "TEST"}'),
-        ("expected_exception", '{"CREATED_TIMESTAMP" : "TEST"}'),
-        ("expected_exception", '{"CREATED_TIMESTAMP" : "7"}'),
-        ("expected_exception", '{"CREDIT_SUBMITTED" : "CQDX_QRP:LOTW&TEST"}'),
-        ("expected_exception", '{"PROGRAMVERSION" : "17.17", "programversionid" : "0.0"}'),
+        ("expected_exception", '{"CREATED_TIMESTAMP" : 7}'),
+        ("expected_data", '{"PROGRAMID" : "pota_rapidlog", "CREATED_TIMESTAMP" : "19561030 120101", "ADIF_VER" : "0.0.0"}, header_comment=None',
+            """<ADIF_VER:5>0.0.0
+<CREATED_TIMESTAMP:15>19561030 120101
+<PROGRAMID:13>pota_rapidlog
+<EOH>
+"""),
+        ("expected_data", '{"PROGRAMID" : "pota_rapidlog", "CREATED_TIMESTAMP" : "19561030 120101", "ADIF_VER" : "0.0.0"}, header_comment=None, include_data_type=True',
+            """<ADIF_VER:5:S>0.0.0
+<CREATED_TIMESTAMP:15:S>19561030 120101
+<PROGRAMID:13:S>pota_rapidlog
+<EOH>
+"""),
+        ),
+
+    "580_freq_to_band" :\
+        (
+        ("expected_failure", '"0.1"'),
+        ("expected_failure", '"250001"'),
+        ("expected_data", '"0.1357"', ("2190M",)),
+        ("expected_data", '"241000"', ("1MM",)),
+        ("expected_data", '"250000"', ("1MM",)),
+        ),
+
+    "590_valid_band" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_failure", '"14.0 14.2 14.3"'),
+        ("expected_failure", '"13.7"'),
+        ("expected_data", '"20m"', ["20m"]),
+        ("expected_data", '"20m   40M"', ["20m", "40M"]),
+        ("expected_data", '"2190M,  1mm"', ["2190M","1mm"]),
+        ),
+
+    "600_valid_frequency" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_failure", '"7m"'),
+        ("expected_failure", '"7m,   10M    20M"'),
+        ("expected_data", '"14"', (['20M'], ['14'])),
+        ("expected_data", '"14, 7"', (['20M', '40M'], ['14', '7'])),
+        ),
+
+    "600_valid_mode" :\
+        (
+        ("expected_failure", '"TEST"'),
+        ("expected_failure", '"TEST test TEST"'),
+        ("expected_failure", '"OLIVIA TEST"'),
+        ("expected_failure", '"SSB USB TEST"'),
+        ("expected_data", '"SSB"', ('SSB',)),
+        ("expected_data", '"SSB USB"', ('SSB', 'USB')),
+        ("expected_data", '"USB"', ('SSB', 'USB')),
+        ("expected_data", '"OLIVIA OLIVIA 32/1000"', ('OLIVIA', 'OLIVIA 32/1000')),
         ),
     }
+
 
 total = 0
 total_errors = []
