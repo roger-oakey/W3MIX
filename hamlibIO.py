@@ -4595,6 +4595,118 @@ def CreditList(test):
 
     return(errors)
 
+def CreditList_or_AwardList(test):
+    """
+    Check for either CreditList or AwarList formats
+
+    This looks like a hack in the ADIF spec, so I have to hack in
+    response to it.
+
+    Arguments:
+        test:
+            String to test
+
+    Returns:
+        Credit field valid:
+            Null string ("")
+        Credit field invalid:
+            Error string.
+    """
+
+    validate_arg_type((
+        (test, str),
+    ))
+
+    credit_award_enumeration = list(Credit_Enumeration) \
+        + list(Award_Enumeration)
+
+    errors = ""
+    bad_medium = {}
+    bad_credit = {}
+    bad_anything = {}
+    for line in test.split(","):
+        #
+        #See if this has any QSL medium ennumerations
+        #
+        match = re.findall(r'^(.*?):(.+)$', line)
+        if match:
+            #
+            #Break out the Credit and QSL medium enumeration
+            #
+            (line, qsl_list) = match[0]
+
+            #
+            #If this has a QSL medium enumeration after it, it MUST be
+            #a CreditAward, check against only the Credit_Enumeration
+            #for validity.
+            #
+            #If invalid, eliminate duplicates and don't bother to check
+            #the QSL Medium Enumeration.
+            #
+            if line.upper() not in Credit_Enumeration:
+                bad_credit[line] = True
+                continue
+
+            bad_qsl = []
+            for qsl in qsl_list.split("&"):
+                if qsl.upper() not in QSL_Medium_Enumeration:
+                    #
+                    #Invalid QSL enumeration. Save errors for later
+                    #formatting
+                    #
+                    bad_qsl.append(qsl)
+                    bad_medium[line] = bad_qsl
+        else:
+            #
+            #This does not use QSL medium enumeration, so it can be either
+            #a CreditList entry or a AwardList enty, check against either
+            #
+            if line.upper() not in credit_award_enumeration:
+                bad_anything[line] = True
+
+    if bad_credit:
+        #
+        #Print invalid credit fields
+        #
+        for cred in sorted(bad_credit):
+            errors += """
+    "{}" is not a valid contest credit.
+""".format(cred)
+
+        errors += """
+    Contest credits must be one of:
+        "{}"
+""".format('"\n        "'.join(sorted(Credit_Enumeration)))
+
+    if bad_medium:
+        #
+        #Bad medium used
+        #
+        for cred, med in sorted(bad_medium.items()):
+            errors += """
+    Credit "{}" has the following invalid Credit mediums specified:
+        "{}"
+""".format(cred, '", "'.join(med))
+
+        errors += """
+    Medium must be one of:
+        "{}"
+""".format('"\n        "'.join(sorted(QSL_Medium_Enumeration)))
+
+    if bad_anything:
+        for cred in sorted(bad_anything):
+            errors += """
+    "{}" is not a valid Contest Credit or Award.
+        "{}"
+""".format(cred)
+
+        errors += """
+    Contest Credit or Awards must be one of:
+        "{}"
+""".format('"\n        "'.join(sorted(credit_award_enumeration)))
+
+    return(errors)
+
 def Dxcc(test):
     """
     ADIF Dxcc field may only contain only one of an explicit list of
@@ -4803,8 +4915,18 @@ DATA_TYPES_VALIDATOR_INDEX = 1
 DTI_INDEX = 0
 VALIDATION_INDEX = 1
 data_types = {
+    #
+    #A litte hack here. CREDIT_SUBMITTED and CREDIT_GRANTED can contain
+    #either AwardList or CreditList, so either one checks both.
+    #
+    #But at the same time the ADIF spec does NOT declare it to be an
+    #Enumeration type, but it has to be so oh well, it appears there's
+    #a bug in the spec. Therefore, eport this field as an enumeration
+    #data type identifier ("E") and hope for the best.
+    #
     "AwardList" : ("", AwardList),
     "CreditList" : ("", CreditList),
+    #
     "SponsoredAwardList" : ("", SponsoredAwardList),
     "Boolean" : ("B", Boolean),
     "Digit" : ("", Digit),
@@ -4861,8 +4983,15 @@ record_fields = {
     "CONTEST_ID" : ("String",),
     "COUNTRY" : ("String",),
     "CQZ" : ("PositiveInteger",),
-    "CREDIT_SUBMITTED" : ("CreditList", "AwardList"),
-    "CREDIT_GRANTED" : ("CreditList", "AwardList"),
+    #
+    #The ADIF spec does not explicitly imply that the CREDIT_SUBMITTED
+    #or CREDIT_GRANTED fields are an enumeration type, but it certainly
+    #implies it, so make it an "E" data type identifier and hope for the
+    #best
+    #
+    "CREDIT_SUBMITTED" : CreditList_or_AwardList,
+    "CREDIT_GRANTED" : CreditList_or_AwardList,
+    #
     "DARC_DOK" : TBS,
     "DISTANCE" : ("Number",),
     "DXCC" : Dxcc,

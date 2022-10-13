@@ -598,7 +598,16 @@ tests = {
         ("expected_exception", '{"TEST" : "TEST"}'),
         ("expected_exception", '{"HRDLOG_QSO_UPLOAD_STATUS" : "TEST"}'),
         ("expected_exception", '{"CREDIT_SUBMITTED" : "CQDX_QRP:LOTW&TEST"}'),
-        ("expected_exception", '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "hRDLOG_QSO_UPLOAD_STATUS" : "Y"}'),
+        ("expected_exception", '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "hrdlog_qso_upload_status" : "Y"}'),
+        ),
+
+    "570_ADIF_header" :\
+        (
+        ("expected_exception", '{"TEST" : "TEST"}'),
+        ("expected_exception", '{"CREATED_TIMESTAMP" : "TEST"}'),
+        ("expected_exception", '{"CREATED_TIMESTAMP" : "7"}'),
+        ("expected_exception", '{"CREDIT_SUBMITTED" : "CQDX_QRP:LOTW&TEST"}'),
+        ("expected_exception", '{"PROGRAMVERSION" : "17.17", "programversionid" : "0.0"}'),
         ),
     }
 
