@@ -664,12 +664,13 @@ tests = {
         (
         ("expected_failure", '"TEST"'),
         ("expected_failure", '"7m"'),
-        ("expected_failure", '"7m,   10M    20M"'),
+        ("expected_failure", '"14 13"'),
+        ("expected_failure", '"14.2.7"'),
         ("expected_data", '"14"', (['20M'], ['14'])),
         ("expected_data", '"14, 7"', (['20M', '40M'], ['14', '7'])),
         ),
 
-    "600_valid_mode" :\
+    "610_valid_mode" :\
         (
         ("expected_failure", '"TEST"'),
         ("expected_failure", '"TEST test TEST"'),
@@ -678,7 +679,7 @@ tests = {
         ("expected_data", '"SSB"', ('SSB',)),
         ("expected_data", '"SSB USB"', ('SSB', 'USB')),
         ("expected_data", '"USB"', ('SSB', 'USB')),
-        ("expected_data", '"OLIVIA OLIVIA 32/1000"', ('OLIVIA', 'OLIVIA 32/1000')),
+        ("expected_data", '"OLIVIA OLIVIA    32/1000"', ('OLIVIA', 'OLIVIA 32/1000')),
         ),
     }
 
