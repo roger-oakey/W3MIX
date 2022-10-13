@@ -87,6 +87,228 @@ mode_tags = (
     "SUBMODE"
     )
 
+pota_countries = {
+    "YA" : "AFGHANISTAN",
+    "ZA" : "ALBANIA",
+    "7X" : "ALGERIA",
+    "C3" : "ANDORRA",
+    "D2" : "ANGOLA",
+    "VP2E" : "ANGUILLA",
+    "CE9" : "ANTARCTICA",
+    "V2" : "ANTIGUA AND BARBUDA",
+    "AR" : "ARGENTINA",
+    "EK" : "ARMENIA",
+    "P4" : "ARUBA",
+    "VK" : "AUSTRALIA",
+    "OE" : "AUSTRIA",
+    "4J" : "AZERBAIJAN",
+    "CU" : "AZORES",
+    "C6" : "BAHAMAS",
+    "A9" : "BAHRAIN",
+    "OCEAN I." : "BANABA I.",
+    "S2" : "BANGLADESH",
+    "8P" : "BARBADOS",
+    "EV" : "BELARUS",
+    "ON" : "BELGIUM",
+    "V3" : "BELIZE",
+    "TY" : "BENIN",
+    "VP9" : "BERMUDA",
+    "A5" : "BHUTAN",
+    "CP" : "BOLIVIA",
+    "T9" : "BOSNIA-HERZEGOVINA",
+    "A2" : "BOTSWANA",
+    "PY" : "BRAZIL",
+    "V85" : "BRUNEI DARUSSALAM",
+    "LZ" : "BULGARIA",
+    "XT" : "BURKINA FASO",
+    "9U5" : "BURUNDI",
+    "XU" : "CAMBODIA",
+    "TJ" : "CAMEROON",
+    "VE" : "CANADA",
+    "D4" : "CAPE VERDE",
+    "ZF" : "CAYMAN IS.",
+    "TL" : "CENTRAL AFRICA",
+    "TT" : "CHAD",
+    "CA" : "CHILE",
+    "BY" : "CHINA",
+    "HK" : "COLOMBIA",
+    "D6" : "COMOROS",
+    "TI" : "COSTA RICA",
+    "TU" : "COTE D'IVOIRE",
+    "9A" : "CROATIA",
+    "CO" : "CUBA",
+    "PJ2" : "CURACAO",
+    "5B" : "CYPRUS",
+    "OK" : "CZECH REPUBLIC",
+    "P5" : "DEMOCRATIC PEOPLE'S REP. OF KOREA",
+    "OU" : "DENMARK",
+    "J2" : "DJIBOUTI",
+    "J7" : "DOMINICA",
+    "HI" : "DOMINICAN REPUBLIC",
+    "HC" : "ECUADOR",
+    "SU" : "EGYPT",
+    "YS" : "EL SALVADOR",
+    "G" : "ENGLAND",
+    "3C" : "EQUATORIAL GUINEA",
+    "E3" : "ERITREA",
+    "ES" : "ESTONIA",
+    "ET" : "ETHIOPIA",
+    "VP8" : "FALKLAND ISLANDS",
+    "OY" : "FAROE ISLANDS",
+    "DA" : "FEDERAL REPUBLIC OF GERMANY",
+    "3D2" : "FIJI",
+    "OH" : "FINLAND",
+    "F" : "FRANCE",
+    "V6" : "FRENCHE STATE OF MICRONESIA",
+    "TR" : "GABON",
+    "4L" : "GEORGIA",
+    "9G1" : "GHANA",
+    "SV" : "GREECE",
+    "OX" : "GREENLAND",
+    "J3" : "GRENADA",
+    "TG" : "GUATEMALA",
+    "GU" : "GUERNSEY",
+    "3X" : "GUINEA",
+    "J5" : "GUINEA-BISSAU",
+    "8R" : "GUYANA",
+    "HH" : "HAITI",
+    "HR" : "HONDURAS",
+    "HA" : "HUNGARY",
+    "TF" : "ICELAND",
+    "VU" : "INDIA",
+    "YB" : "INDONESIA",
+    "EP" : "IRAN",
+    "YI" : "IRAQ",
+    "EI" : "IRELAND",
+    "GD" : "ISLE OF MAN",
+    "4X" : "ISRAEL",
+    "I" : "ITALY",
+    "6Y" : "JAMAICA",
+    "JA" : "JAPAN",
+    "GJ" : "JERSEY",
+    "JY" : "JORDAN",
+    "UL" : "KAZAKHSTAN",
+    "5Z4" : "KENYA",
+    "3DA" : "KINGDOM OF ESWATINI",
+    "T31" : "KIRIBATI",
+    "9K2" : "KUWAIT",
+    "UM" : "KYRGYZSTAN",
+    "XW" : "LAOS",
+    "YL" : "LATVIA",
+    "OD5" : "LEBANON",
+    "7P8" : "LESOTHO",
+    "EL" : "LIBERIA",
+    "5A" : "LIBYA",
+    "HB0" : "LIECHTENSTEIN",
+    "LY" : "LITHUANIA",
+    "LX" : "LUXEMBOURG",
+    "XX9" : "MACAO",
+    "Z3" : "MACEDONIA",
+    "5R" : "MADAGASCAR",
+    "7Q7" : "MALAWI",
+    "9M" : "MALAYSIA",
+    "8Q6" : "MALDIVES",
+    "TZ" : "MALI",
+    "9H" : "MALTA",
+    "V7" : "MARSHALL ISLANDS",
+    "5T" : "MAURITANIA",
+    "3B8" : "MAURITIUS",
+    "XE" : "MEXICO",
+    "UO" : "MOLDOVA",
+    "JT" : "MONGOLIA",
+    "4O" : "MONTENEGRO",
+    "VP2M" : "MONTSERRAT",
+    "CN" : "MOROCCO",
+    "C9" : "MOZAMBIQUE",
+    "XZ2" : "MYANMAR",
+    "V5" : "NAMIBIA",
+    "C2" : "NAURU",
+    "9N" : "NEPAL",
+    "PA" : "NETHERLANDS",
+    "ZL" : "NEW ZEALAND",
+    "YN" : "NICARAGUA",
+    "5U" : "NIGER",
+    "5N" : "NIGERIA",
+    "E6" : "NIUE",
+    "GI" : "NORTHERN IRELAND",
+    "LA" : "NORWAY",
+    "A4" : "OMAN",
+    "AP" : "PAKISTAN",
+    "T8" : "PALAU",
+    "ZC6" : "PALESTINE",
+    "HP" : "PANAMA",
+    "P29" : "PAPUA NEW GUINEA",
+    "ZP" : "PARAQUAY",
+    "OA" : "PERU",
+    "DU" : "PHILIPPINES",
+    "SP" : "POLAND",
+    "CT" : "PORTUGAL",
+    "A7" : "QATAR",
+    "Z6" : "REPUBLIC OF KOSOVO",
+    "TN" : "REPUBLIC OF THE CONGO",
+    "YO" : "ROMANIA",
+    "UA" : "RUSSIAN FEDERATION",
+    "9X5" : "RWANDA",
+    "T7" : "SAN MARINO",
+    "S9" : "SAO TOME AND PRINCIPE",
+    "HZ" : "SAUDI ARABIA",
+    "GM" : "SCOTLAND",
+    "6W" : "SENEGAL",
+    "YT" : "SERBIA",
+    "S79" : "SEYCHELLES",
+    "9L1" : "SIERRA LEONE",
+    "9V" : "SINGAPORE",
+    "OM" : "SLOVAK REPUBLIC",
+    "S5" : "SLOVENIA",
+    "H44" : "SOLOMON IS.",
+    "T5" : "SOMALIA",
+    "ZR" : "SOUTH AFRICA",
+    "HL" : "SOUTH KOREA",
+    "ST0" : "SOUTH SUDAN [REPUBLIC OF]",
+    "1A0KM" : "SOVEREIGN MILITARY ORDER OF MALTA",
+    "EA" : "SPAIN",
+    "4S7" : "SRI LANKA",
+    "PJ7" : "ST MAARTEN",
+    "V4" : "ST. KITTS AND NEVIS",
+    "J6" : "ST. LUCIA",
+    "J8" : "ST. VINCENT",
+    "ST" : "SUDAN",
+    "PZ" : "SURINAME",
+    "SM" : "SWEDEN",
+    "HB" : "SWITZERLAND",
+    "EY" : "SYRIA",
+    "YK" : "SYRIA",
+    "BV" : "TAIWAN",
+    "5H3" : "TANZANIA",
+    "HS" : "THAILAND",
+    "C5" : "THE GAMBIA",
+    "4W" : "TIMOR-LESTE",
+    "5V" : "TOGO",
+    "A3" : "TONGA",
+    "9Y" : "TRINIDAD AND TOBAGO",
+    "3V8" : "TUNISIA",
+    "TA" : "TURKEY",
+    "EZ" : "TURKMENISTAN",
+    "VP5" : "TURKS AND CAICOS IS.",
+    "T2" : "TUVALU",
+    "5X" : "UGANDA",
+    "UB" : "UKRAINE",
+    "A6" : "UNITED ARAB EMIRATES",
+    "4U1UN" : "UNITED NATIONS HQ",
+    "K" : "UNITED STATES OF AMERICA",
+    "CV" : "URUGUAY",
+    "UI" : "UZBEKISTAN",
+    "YJ8" : "VANUATU",
+    "HV" : "VATICAN",
+    "YV" : "VENEZUELA",
+    "XV2" : "VIET NAM",
+    "GW" : "WALES",
+    "S0" : "WESTERN SAHARA",
+    "7O" : "YEMEN",
+    "9J2" : "ZAMBIA",
+    "Z2" : "ZIMBABWE",
+    }
+
 ####
 #### Subroutines
 ####
@@ -140,6 +362,53 @@ def valid_power(power):
        by a "W".
        Example: "100W" or "5W".
 """.format(power))
+
+def validate_park(park):
+    """
+    See if valid power specified. If so, return it. If not, return False
+
+    Arguments:
+        power:   String containing power to be verified
+
+    Returns:
+        Power string if correct
+        False if power string incorrectly formatted
+    """
+
+    hamlibIO.validate_arg_type((
+        (park, str),
+    ))
+
+
+    #
+    #Save park in dictonary to eliminate duplicates
+    #
+    park = park.upper()
+    #
+    #See if park format correct
+    #
+    park_parts = re.findall(r'^\s*(.+?)\s*-\d{4}\s*$', park)
+    if park_parts:
+        if park_parts[0] not in pota_countries:
+            country_list = ""
+            country_order = {v: k for k, v in pota_countries.items()}
+            for key, value in sorted(country_order.items()):
+                country_list += '       "{}" ({})\n'.format(value, key)
+            return("""
+Error: "{}" is not a valid POTA country. Must be one of:
+{}""".format(park_parts[0], country_list))
+
+    else:
+        #
+        #If a park identifier has a bad format, report it
+        #
+        return("""
+Error: "{}" is not a valid format for a park.
+   It must be one or more letters, followed by a dash and then four digits.
+   Examples: "K-1211" or "VE-5678".
+""".format(park))
+
+    return("")
 
 ###############################################################################
 ###############################################################################
@@ -219,7 +488,7 @@ operators = sorted(ops)
 help = """
 Enter one or more park codes. Multiple park codes are when you're activating
     multiple parks from one location.
-    Examples: "K-1211" or "K-1211 K-1214"
+    Examples: "VE-1211" or "K-1211 K-1214"
 """
 while(True):
     parks = hamlibIO.get_input(help,
@@ -231,30 +500,24 @@ Park code(s): """).upper()
     #
     bad_park = False
     pks = {}
+    errors = ""
     for park in re.split(hamlibIO.default_split, parks):
+        errors += validate_park(park)
+        if errors:
+            bad_park = True
+            continue
         #
         #Save park in dictonary to eliminate duplicates
         #
-        pks[park] = True
-        #
-        #See if park format correct
-        #
-        if not re.fullmatch(r'[A-Z]+-\d{4}', park):
-            #
-            #If a park identifier has a bad format, report it
-            #
-            print ("""
-Error: "{}" is not a valid format for a park.
-       It must be one or more letters, followed by a dash and then four digits.
-       Examples: "K-1211" or "K-1214".
-""".format(park))
-            bad_park = True
+        pks[park.upper()] = True
 
     #
     #If a bad park format was detected, ask the park question again
     #
-    if not bad_park:
+    if not errors:
         break
+
+    print(errors)
 
 #
 #Save unique parks
@@ -694,7 +957,7 @@ Error: More than two double quotes '"' detected. A comment must have two double
         #
         #If it's a park, save it as a park
         #
-        if re.fullmatch(r'[A-Z]+-\d{4}', component):
+        if not validate_park(component):
             #
             #Eliminate duplicate parks by using dictonary
             #
