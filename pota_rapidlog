@@ -26,7 +26,7 @@ import time
 
 re_comment = r'"[\ -\!\#-\~]*("|$)?'
 re_power = r'\d+W'
-adif_file_extension = ".adif"
+adif_file_extension = ".adi"
 
 ####
 #### Import large tables and help files to de-clutter the program
@@ -324,7 +324,7 @@ def determine_filename(callsign, park, state):
         state:      Optional state identification
 
     Returns:
-        CallSign_Park[_state].adif
+        CallSign_Park[_state].adi
     """
 
     if state:
@@ -439,9 +439,11 @@ Type "HELP" at any time to get the complete documentation for pota_rapidlog.
 
 help = """
 Enter one or more operator callsigns (operators "sharing a microphone").
-    Callsigns may include the "/" character.
-    Examples: "K0RLO", "K0RLO W1JU" or "K0RLO/R1"
+Callsigns may include the "/" character.
+
+    Examples: "K0RLO", "K0RLO/R1" or "K0RLO W1JU"
 """
+
 while(True):
     operators = hamlibIO.get_input(help,
         """
@@ -486,10 +488,12 @@ operators = sorted(ops)
 #scenic trail, for example, you can log both at once.
 #
 help = """
-Enter one or more park codes. Multiple park codes are when you're activating
-    multiple parks from one location.
+Enter one or more park codes. Multiple park codes are when you're
+activating multiple parks from one location.
+
     Examples: "VE-1211" or "K-1211 K-1214"
 """
+
 while(True):
     parks = hamlibIO.get_input(help,
         """
@@ -529,12 +533,15 @@ parks = sorted(pks)
 ####
 
 help = """
-Type <Enter> if no state is to be specified.
-    Enter country and state identifier
-    Note: US states and territories are verified, everything else is accepted
-    as-is.
+Type <Enter> if no state is to be specified or enter country and state
+identifier.
+
+Note: US states and territories are verified, everything else is
+accepted as-is.
+
     Examples: "US-CO" or "US-MP"
 """
+
 while(True):
     #
     #Get optional state information that will be added at end of filename
@@ -593,12 +600,14 @@ Error: "{}" is not a valid state or province for within country "{}"
 #
 #Note: only one callsign allowed for a special event.
 #
-while(True):
-    help = """
-Type <Enter> if this is not a special event.
-    Enter the special event callsign.
+help = """
+Type <Enter> if this is not a special event or enter the special event
+callsign.
+
     Examples: "W4W" or "W3MX"
 """
+
+while(True):
     special_event_callsign = hamlibIO.get_input(help,
         """
 Special event callsign [NONE]: """, default="").upper()
@@ -636,9 +645,10 @@ else:
 
 help = """
 Enter "N" (or just press <Enter>) if you wish to continue to log hunter
-    contacts in the existing file.
-Enter "Y" if you wish to archive the existing log file (with the last modified
-    date included in the extension) and start a new log file.
+contacts in the existing file.
+
+Enter "Y" if you wish to archive the existing log file (with the last
+modified date included in the extension) and start a new log file.
 """
 
 for operator in callsigns:
@@ -654,19 +664,22 @@ for operator in callsigns:
         #Get last modified time for this file and prompt if it should be archived
         #
         mtime = time.localtime(os.path.getmtime(filename))
+        new_filename = filename + time.strftime("_%Y%m%d-%H%M%S", mtime)
         prompt = """
-POTA log already exists for this callsign and park: {}
-Last modified on {} (Local time)
-Do you wish to archive it and start a new log""".format(filename,
+POTA log already exists for this callsign and park:
+    "{}"
+Last modified on {} (Local). Do you wish to archive this as:
+    "{}"
+and start a new log""".format(filename,
             time.strftime("%Y/%m/%d %H:%M:%S", mtime))
 
         #
         #New log file to start, rename the old file
         #
         if hamlibIO.get_yes_no(help, prompt, "N"):
-            new_filename = filename + time.strftime("_%Y%m%d-%H%M%S", mtime)
             print("""
-Renaming existing log file "{}" to "{}"
+Renaming existing log file "{}"
+to "{}"
 """.format(filename, new_filename))
             os.rename(filename, new_filename)
 
@@ -675,17 +688,22 @@ Renaming existing log file "{}" to "{}"
 #### Get the operating frequency or band
 ####
 
-while(True):
-    help = """
+help = """
 Enter the band or frequency. If you enter a frequency, the band will be
-    automatically set.
-    If split bands enter transmit band first, followed by the
-    receive band.
+automatically set.
+
+If split operation, enter transmit band first, followed by the receive
+band.
+
     Examples: "20M", "70CM" or "40M 20M"
-    Or, enter the transmit frequency. If split frequency enter transmit
-    frequency first, followed by the receive frequency.
+
+Or, enter the transmit frequency. If split operation, enter transmit
+frequency first, followed by the receive frequency.
+
     Examples: "14.215" or "114.215 14.275"
 """
+
+while(True):
     freq = hamlibIO.get_input(help, """
 Band or frequency: """).upper()
 
@@ -707,9 +725,10 @@ Band or frequency: """).upper()
     #Report error and ask again
     #
     print("""
-Error: Incorrectly formatted band or frequency. Band should be entered as "20M"
-       or "70CM" or frequency should be entered as "14.215". If split bands or
-       frequencies, enter transmit band or frequency first,
+Error: Incorrectly formatted band or frequency. Band should be entered
+       as "20M" or "70CM" or frequency should be entered as "14.215".
+       If split bands or frequencies, enter transmit band or frequency
+       first.
        Examples:
            Band: "20M", "40M" or for split: "20M 40M".
            Frequency: "14.215", "14.275" or for split: "14.215 14.275"
@@ -719,12 +738,14 @@ Error: Incorrectly formatted band or frequency. Band should be entered as "20M"
 #### Get the operating mode
 ####
 
-while(True):
-    help = """
-Enter the QSO mode and, if desired, the submode. Note that you can specify JUST
-    the submode and the mode will be determined.
-    Examples: "CW", "SSB", "SSB USB", "LSB", "OLIVIA 4/125"
+help = """
+Enter the QSO mode and, if desired, the submode. Note that you can
+specify JUST the submode and the mode will be determined.
+
+    Examples: "CW", "SSB", "SSB USB", "LSB" or "OLIVIA 4/125"
 """
+
+while(True):
     mode = hamlibIO.get_input(help, """
 Operating mode: """).upper()
 
@@ -769,10 +790,7 @@ while (True):
     #
     #See if power is being reported
     #
-    if power[0] != "0":
-        display_power = power[0] + "W"
-    else:
-        display_power = "nopwr"
+    display_power = (power[0] + "W") if power[0] != "0" else "nopwr"
 
     #
     #If we just have a mode (len == 1), display that ([0]]. If we have a
@@ -792,22 +810,25 @@ while (True):
     #
     help = """
 At this prompt you can do the following:
-    Specify a new mode and optionally a submode, such as "CW" or "SSB USB".
-    Specify a new band or transmit AND receive band, such as
-        "20M" or "20M 40M".
-        If you specify the band, no frequency will not be recorded.
+    Specify a new mode and optionally a submode, such as "CW", "SSB",
+    "SSB USB" or "LSB".
+
+    Specify a new band or transmit AND receive band, such as "20M" or
+    "20M 40M". If you specify just a band, no frequency will not be
+    recorded.
+
     Specify a new frequency or transmit AND receive frequency, such as
-        "14.215" or "14.215 14.275"
-        If you specify the frequency, the band will be correctly set.
+    "14.215" or "14.215 14.275" If you specify the frequency, the band
+    will be automatically be determined and recorded in the log.
+
     Specify a new transmit power, such as "100W". Enter "0W" to stop
-        recording a transmit power.
+    recording a transmit power.
 
     Enter a hunter contact:
         Enter the hunter's callsign, followed by optional information in
         any order like sent and received RSTs, hunter transmit power,
         park to park identifier(s) and a comment enclosed in double
-        quotes (or if the comment is at the end of the line, it only has
-        to be started with a double quote - no need for a closing quote).
+        quotes.
 
         Examples:
             Absolute minimum, just the callsign:
