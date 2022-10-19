@@ -9,464 +9,6 @@ import traceback
 import TestHarness
 
 #
-#Validation tests are created in the order of the functions in hamlibIO.
-#[0] of the key tuple is the number that forces sort order of the tests
-#as well as giving each routine a unique major test sequence number.
-#
-#   Note: It's best to leave room, such as numbering by 10s to allow
-#         functions to be inserted in the validation test list in the
-#         order they appear in the module.
-#
-#[1] of the key tuple is the name of the function in hamlibIO to
-#test. This will be "eval'd" to call the function.
-#
-#The value of the dictonary entry is a tuple of tuples. First argument
-#is the test routine to use, the second the argument(s) to pass to the
-#function under test and the third, if present, is the return value
-#expected, if any.
-#
-
-validation_tests = {
-    (10, "type_xlate") :\
-        (
-        (TestHarness.exception, '"TEST"', "hamlibIOerror"), #Not a type
-        (TestHarness.compare, "type(None)", "None"),
-        (TestHarness.compare, "dict", "dict"),
-        ),
-
-    (20, "validate_arg_type") :\
-        (
-        (TestHarness.exception, '"TEST"', "hamlibIOerror"),
-        (TestHarness.exception, "[]", "hamlibIOerror"),
-        (TestHarness.exception, '(("TEST",))', "hamlibIOerror"),
-        (TestHarness.exception, '((("TEST", str), ()))', "hamlibIOerror"),
-        (TestHarness.exception, '(("TEST", str, str),)', "hamlibIOerror"),
-        (TestHarness.exception, '(("TEST", "TEST"),)', "hamlibIOerror"),
-        ),
-
-    (30, "Boolean") :\
-        (
-        (TestHarness.display, '"X"'), #Not one of YyNn
-        (TestHarness.compare, '"Y"', ""),
-        (TestHarness.compare, '"y"', ""),
-        (TestHarness.compare, '"N"', ""),
-        (TestHarness.compare, '"n"', ""),
-        ),
-
-    (40, "Digit") :\
-        (
-        (TestHarness.display, '"X"'), #Non-numeric
-        (TestHarness.compare, '"0"', ""),
-        (TestHarness.compare, '"9"', ""),
-        ),
-
-    (50, "Integer") :\
-        (
-        (TestHarness.display, '"+17"'), #+ not allowed
-        (TestHarness.display, '"1d"'), #Non-numeric
-        (TestHarness.compare, '"17"', ""),
-        (TestHarness.compare, '"-17"', ""),
-        ),
-
-    (60, "PositiveInteger") :\
-        (
-        (TestHarness.display, '"0"'), #Not positive
-        (TestHarness.display, '"-17"'), #Not positive
-        (TestHarness.display, '"1d"'), #Non-numeric
-        (TestHarness.compare, '"17"', ""),
-        ),
-
-    (70, "Number") :\
-        (
-        (TestHarness.display, '"+17"'), # + not allowed
-        (TestHarness.display, '"."'), #No digits
-        (TestHarness.display, '"1d"'), #Non-numeric
-        (TestHarness.compare, '"0"', ""),
-        (TestHarness.compare, '"17"', ""),
-        (TestHarness.compare, '"-17"', ""),
-        (TestHarness.compare, '"17.17"', ""),
-        (TestHarness.compare, '"-.17"', ""),
-        (TestHarness.compare, '"-17.17"', ""),
-        ),
-
-    (80, "Character") :\
-        (
-        (TestHarness.display, '""'), #Zero length string
-        (TestHarness.display, '"17"'), #More than one character
-        (TestHarness.display, 'chr(ord(" ")-1)'), #0x1f
-        (TestHarness.display, 'chr(ord("~")+1)'), #0x7f
-        (TestHarness.compare, '" "', ""), #Bottom end of valid range
-        (TestHarness.compare, '"~"', ""), #Top end of valid range
-        ),
-
-    (90, "String") :\
-        (
-        (TestHarness.display, 'chr(ord(" ")-1)'), #0x1f
-        (TestHarness.display, 'chr(ord("~")+1)'), #0x7f
-        (TestHarness.display, '""'), #Zero length string
-        (TestHarness.compare, '" "', ""), #Bottom end of valid range
-        (TestHarness.compare, '"~"', ""), #Top end of valid range
-        ),
-
-    (100, "TBS") :\
-        (
-        (TestHarness.compare, '"Ignored"', ""),
-        ),
-
-    (110, "Region") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.compare, '"AI"', ""),
-        (TestHarness.compare, '"ai"', ""),
-        ),
-
-    (120, "AwardList") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.compare, '"DXCC"', ""),
-        (TestHarness.compare, '"dxcc"', ""),
-        ),
-
-    (130, "SponsoredAwardList") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.compare, '"ARRL_"', ""),
-        (TestHarness.compare, '"arrl_"', ""),
-        ),
-
-    (140, "MultilineString") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.compare, '"TEST"', ""),
-        ),
-
-    (150, "Date") :\
-        (
-        (TestHarness.display, '"1956"'),
-        (TestHarness.display, '"20220000"'),
-        (TestHarness.display, '"20220100"'),
-        (TestHarness.display, '"20221332"'),
-        (TestHarness.display, '"20220229"'),
-        (TestHarness.display, '"20221032"'),
-        (TestHarness.compare, '"20221030"', ""),
-        ),
-
-    (160, "Time") :\
-        (
-        (TestHarness.display, '"ABCDEF"'),
-        (TestHarness.display, '"00"'),
-        (TestHarness.display, '"00000000"'),
-        (TestHarness.display, '"2400"'),
-        (TestHarness.display, '"2360"'),
-        (TestHarness.display, '"240000"'),
-        (TestHarness.display, '"236000"'),
-        (TestHarness.display, '"230060"'),
-        (TestHarness.display, '"236060"'),
-        (TestHarness.display, '"246060"'),
-        (TestHarness.compare, '"0000"', ""),
-        (TestHarness.compare, '"2359"', ""),
-        (TestHarness.compare, '"000000"', ""),
-        (TestHarness.compare, '"235959"', ""),
-        ),
-
-    (170, "Ant_Path") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.compare, '"O"', ""),
-        ),
-
-    (180, "Location") :\
-        (
-        (TestHarness.display, '"W90 00.000"'),
-        (TestHarness.display, '"W090 0.000"'),
-        (TestHarness.display, '"W090 00.00"'),
-        (TestHarness.display, '"A000 00.000"'),
-        (TestHarness.display, '"W181 60.000"'),
-        (TestHarness.display, '"W180 01.000"'),
-        (TestHarness.display, '"W180 00.001"'),
-        (TestHarness.compare, '"N000 00.000"', ""),
-        (TestHarness.compare, '"S180 00.000"', ""),
-        (TestHarness.compare, '"E000 00.000"', ""),
-        (TestHarness.compare, '"W180 00.000"', ""),
-        ),
-
-    #Note that "Longitude" uses "Location" so no need to repeat those
-    #tests.
-    (190, "Longitude") :\
-        (
-        (TestHarness.display, '"N000 00.000"'),
-        (TestHarness.compare, '"E000 00.000"', ""),
-        (TestHarness.compare, '"W180 00.000"', ""),
-        ),
-
-    #Note that "Latitude" uses "Location" so no need to repeat those
-    #tests.
-    (200, "Latitude") :\
-        (
-        (TestHarness.display, '"W000 00.000"'),
-        (TestHarness.display, '"N091 00.000"'),
-        (TestHarness.display, '"S090 01.000"'),
-        (TestHarness.display, '"N090 00.001"'),
-        (TestHarness.compare, '"N000 00.000"', ""),
-        (TestHarness.compare, '"S090 00.000"', ""),
-        ),
-
-    (210, "GridSquare") :\
-        (
-        (TestHarness.display, '"00"'),
-        (TestHarness.display, '"AS"'),
-        (TestHarness.display, '"AABB"'),
-        (TestHarness.display, '"AA00AY"'),
-        (TestHarness.display, '"XX99YY00"'),
-        (TestHarness.display, '"SSAAYYBB"'),
-        (TestHarness.compare, '"AA"', ""),
-        (TestHarness.compare, '"AA00"', ""),
-        (TestHarness.compare, '"AA00AA"', ""),
-        (TestHarness.compare, '"rr99xx99"', ""),
-        ),
-
-    (220, "GridSquareList") :\
-        (
-        (TestHarness.display, '"AA, BB"'),
-        (TestHarness.compare, '"AA"', ""),
-        (TestHarness.compare, '"AA,rr"', ""),
-        ),
-
-    (230, "Arrl_Sect") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.compare, '"CO"', ""),
-        (TestHarness.compare, '"vt"', ""),
-        ),
-
-    (240, "Band") :\
-        (
-        (TestHarness.display, '"0M"'),
-        (TestHarness.compare, '"1.25M"', ""),
-        (TestHarness.compare, '"630m"', ""),
-        ),
-
-    (250, "QSO_Upload_Status") :\
-        (
-        (TestHarness.display, '"X"'),
-        (TestHarness.compare, '"M"', ""),
-        (TestHarness.compare, '"y"', ""),
-        ),
-
-    (260, "Continent") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.compare, '"AF"', ""),
-        (TestHarness.compare, '"oc"', ""),
-        ),
-
-    (270, "Contest") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.compare, '"ARRL-10-GHZ"', ""),
-        (TestHarness.compare, '"wfd"', ""),
-        ),
-
-    (280, "CreditList") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.display, '"TEST:TEST"'),
-        (TestHarness.display, '"WAS_SATELLITE:"'),
-        (TestHarness.display, '"WAS_SATELLITE:&"'),
-        (TestHarness.display, '"WAS_SATELLITE:TEST"'),
-        (TestHarness.display, '"WAS_SATELLITE:TEST1&TEST2"'),
-        (TestHarness.display, '"WAS_SATELLITE:LOTW&TEST"'),
-        (TestHarness.compare, '"CQWPX"', ""),
-        (TestHarness.compare, '"WAS_SATELLITE:CARD"', ""),
-        (TestHarness.compare, '"WAS_SATELLITE:CARD&LOTW"', ""),
-        ),
-
-    (290, "CreditList_or_AwardList") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.display, '"TEST:TEST"'),
-        (TestHarness.display, '"WAS_SATELLITE:"'),
-        (TestHarness.display, '"WAS_SATELLITE:&"'),
-        (TestHarness.display, '"WAS_SATELLITE:TEST"'),
-        (TestHarness.display, '"WAS_SATELLITE:TEST1&TEST2"'),
-        (TestHarness.display, '"WAS_SATELLITE:LOTW&TEST"'),
-        (TestHarness.compare, '"CQWPX"', ""),
-        (TestHarness.compare, '"WAS_SATELLITE:CARD"', ""),
-        (TestHarness.compare, '"was_satellite:card&lotw&eqsl"', ""),
-        (TestHarness.compare, '"DXCC"', ""),
-        (TestHarness.compare, '"dxcc"', ""),
-        ),
-
-    (300, "Dxcc") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.compare, '"291"', ""),
-        ),
-
-    (310, "QSL_Rcvd") :\
-        (
-        (TestHarness.display, '"T"'),
-        (TestHarness.compare, '"Y"', ""),
-        ),
-
-    (320, "QSL_Sent") :\
-        (
-        (TestHarness.display, '"T"'),
-        (TestHarness.compare, '"Y"', ""),
-        ),
-
-    (330, "QSL_Via") :\
-        (
-        (TestHarness.display, '"T"'),
-        (TestHarness.compare, '"D"', ""),
-        ),
-
-    (340, "Mode") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.compare, '"SSB"', ""),
-        ),
-
-    (350, "WWFFRef") :\
-        (
-        (TestHarness.display, '"AFF-000"'),
-        (TestHarness.display, '"AFF-00000"'),
-        (TestHarness.compare, '"AFF-0000"', ""),
-        (TestHarness.compare, '"ABFF-0000"', ""),
-        (TestHarness.compare, '"ABCFF-0000"', ""),
-        (TestHarness.compare, '"abcdFF-9999"', ""),
-        ),
-
-    (500, "userdef") :\
-        (
-        (TestHarness.display, '"USERDEF"'),
-        (TestHarness.display, '"USERDEF0"'),
-        (TestHarness.display, '"USERDEFX"'),
-        (TestHarness.compare, '"USERDEF1"', ""),
-        ),
-
-    (510, "dictonary_duplicates") :\
-        (
-        (TestHarness.display, '{"AA":4, "aa":8}'),
-        (TestHarness.compare, '{"AA":4, "BB":8}', ""),
-        ),
-
-    (520, "get_data_type_indicator") :\
-        (
-        (TestHarness.compare, 'hamlibIO.record_fields["ANT_AZ"]', "N"),
-        (TestHarness.compare, 'hamlibIO.record_fields["BAND"]', "E"),
-        ),
-
-    (530, "valid_callsign") :\
-        (
-        (TestHarness.display, '"K0RLO/mobile"'),
-        (TestHarness.compare, '"JY1"', ""),
-        (TestHarness.compare, '"K0RLO"', ""),
-        (TestHarness.compare, '"W1JU"', ""),
-        (TestHarness.compare, '"VE7XYZ"', ""),
-        (TestHarness.compare, '"K0RLO/mobile", slash=True', ""),
-        ),
-
-    (540, "field") :\
-        (
-        (TestHarness.compare, '"FOO", "BAR"', "<FOO:3>BAR"),
-        (TestHarness.compare, '"FOO", "BAR", "S"', "<FOO:3:S>BAR"),
-        ),
-
-    (550, "validate_field") :\
-        (
-        (TestHarness.display, 'hamlibIO.record_fields, "TEST", "0"'),
-        (TestHarness.display, 'hamlibIO.record_fields, "CQZ", "0"'),
-        (TestHarness.display, 'hamlibIO.record_fields, "HRDLOG_QSO_UPLOAD_STATUS", "TEST"'),
-        (TestHarness.display, 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "TEST1,TEST2"'),
-        (TestHarness.display, 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "CQDX_QRP:TEST"'),
-        (TestHarness.display, 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "CQDX_QRP:LOTW&TEST"'),
-        (TestHarness.compare, 'hamlibIO.record_fields, "HRDLOG_QSO_UPLOAD_STATUS", "N"', ""),
-        (TestHarness.compare, 'hamlibIO.record_fields, "CQZ", "17"', ""),
-        (TestHarness.compare, 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "CQDXFIELD_SATELLITE"', ""),
-        (TestHarness.compare, 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "DXCC,USACA"', ""),
-        (TestHarness.compare, 'hamlibIO.record_fields, "CREDIT_SUBMITTED", "DXCC,CQDX_QRP:LOTW&CARD"', ""),
-        ),
-
-    (560, "ADIF_record") :\
-        (
-        (TestHarness.exception, '{"TEST" : "TEST"}', "hamlibIOerror"),
-        (TestHarness.exception, '{"HRDLOG_QSO_UPLOAD_STATUS" : "TEST"}', "hamlibIOerror"),
-        (TestHarness.exception, '{"CREDIT_SUBMITTED" : "CQDX_QRP:LOTW&TEST"}', "hamlibIOerror"),
-        (TestHarness.exception, '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "hrdlog_qso_upload_status" : "Y"}', "hamlibIOerror"),
-        (TestHarness.compare, '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}', "<HRDLOG_QSO_UPLOAD_STATUS:1>N<call:5>K0RLO<EOR>\n"),
-        (TestHarness.compare, '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}, spaces=2', "<HRDLOG_QSO_UPLOAD_STATUS:1>N  <call:5>K0RLO  <EOR>\n"),
-        (TestHarness.compare, '{"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}, spaces=1, include_data_type=True',
-            "<HRDLOG_QSO_UPLOAD_STATUS:1:E>N <call:5:S>K0RLO <EOR>\n"),
-        ),
-
-    (570, "ADIF_header") :\
-        (
-        (TestHarness.exception, '{"TEST" : "TEST"}', "hamlibIOerror"),
-        (TestHarness.exception, '{"CREATED_TIMESTAMP" : 7}', "hamlibIOerror"),
-        (TestHarness.compare, '{"PROGRAMID" : "pota_rapidlog", "CREATED_TIMESTAMP" : "19561030 120101", "ADIF_VER" : "0.0.0"}, header_comment=None',
-            """<ADIF_VER:5>0.0.0
-<CREATED_TIMESTAMP:15>19561030 120101
-<PROGRAMID:13>pota_rapidlog
-<EOH>
-"""),
-        (TestHarness.compare, '{"PROGRAMID" : "pota_rapidlog", "CREATED_TIMESTAMP" : "19561030 120101", "ADIF_VER" : "0.0.0"}, header_comment=None, include_data_type=True',
-            """<ADIF_VER:5:S>0.0.0
-<CREATED_TIMESTAMP:15:S>19561030 120101
-<PROGRAMID:13:S>pota_rapidlog
-<EOH>
-"""),
-        ),
-
-    (580, "freq_to_band") :\
-        (
-        (TestHarness.display, '"0.1"'),
-        (TestHarness.display, '"250001"'),
-        (TestHarness.compare, '"0.1357"', ("2190M",)),
-        (TestHarness.compare, '"241000"', ("1MM",)),
-        (TestHarness.compare, '"250000"', ("1MM",)),
-        ),
-
-    (590, "valid_band") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.display, '"14.0 14.2 14.3"'),
-        (TestHarness.display, '"13.7"'),
-        (TestHarness.compare, '"20m"', ["20m"]),
-        (TestHarness.compare, '"20m   40M"', ["20m", "40M"]),
-        (TestHarness.compare, '"2190M,  1mm"', ["2190M","1mm"]),
-        ),
-
-    (600, "valid_frequency") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.display, '"7m"'),
-        (TestHarness.display, '"14 13"'),
-        (TestHarness.display, '"14.2.7"'),
-        (TestHarness.compare, '"14"', (['20M'], ['14'])),
-        (TestHarness.compare, '"14, 7"', (['20M', '40M'], ['14', '7'])),
-        ),
-
-    (610, "valid_mode") :\
-        (
-        (TestHarness.display, '"TEST"'),
-        (TestHarness.display, '"TEST test TEST"'),
-        (TestHarness.display, '"OLIVIA TEST"'),
-        (TestHarness.display, '"SSB USB TEST"'),
-        (TestHarness.compare, '"SSB"', ('SSB',)),
-        (TestHarness.compare, '"SSB USB"', ('SSB', 'USB')),
-        (TestHarness.compare, '"USB"', ('SSB', 'USB')),
-        (TestHarness.compare, '"OLIVIA OLIVIA    32/1000"', ('OLIVIA', 'OLIVIA 32/1000')),
-        ),
-    }
-
-def run_tests():
-    #
-    #Run all validation tests
-    #
-    TestHarness.run_tests(__name__, validation_tests)
-
-#
 #Global variables
 #
 
@@ -6654,3 +6196,462 @@ Error: "{}" is an invalid mode. It must be one of the following:
 Error: "{}" is an invalid mode or submode.
    Examples: "CW", "LSB" "SSB USB" or "JT9 JT9H FAST".
 """.format(mode_text))
+
+#
+#Validation tests are created in the order of the functions in hamlibIO.
+#[0] of the key tuple is the number that forces sort order of the tests
+#as well as giving each routine a unique major test sequence number.
+#
+#   Note: It's best to leave room, such as numbering by 10s to allow
+#         functions to be inserted in the validation test list in the
+#         order they appear in the module.
+#
+#[1] of the key tuple is the name of the function in hamlibIO to
+#test. This will be "eval'd" to call the function.
+#
+#The value of the dictonary entry is a tuple of tuples. First argument
+#is the test routine to use, the second the argument(s) to pass to the
+#function under test and the third, if present, is the return value
+#expected, if any.
+#
+
+validation_tests = (
+    (type_xlate,
+        (
+        (TestHarness.exception, ("TEST",), "hamlibIOerror"), #Not a type
+        (TestHarness.compare, (type(None),), "None"),
+        (TestHarness.compare, (dict,), "dict"),
+        )),
+
+    (validate_arg_type,
+        (
+        (TestHarness.exception, ("TEST",), "hamlibIOerror"),
+        (TestHarness.exception, ("[]", ), "hamlibIOerror"),
+        (TestHarness.exception, ((("TEST",)),), "hamlibIOerror"),
+        (TestHarness.exception, (((("TEST", str), ())),), "hamlibIOerror"),
+        (TestHarness.exception, ((("TEST", str, str),),), "hamlibIOerror"),
+        (TestHarness.exception, ((("TEST", "TEST"),),), "hamlibIOerror"),
+        )),
+
+    (Boolean,
+        (
+        (TestHarness.display, ("X",), ), #Not one of YyNn
+        (TestHarness.compare, ("Y",), ""),
+        (TestHarness.compare, ("y",), ""),
+        (TestHarness.compare, ("N",), ""),
+        (TestHarness.compare, ("n",), ""),
+        )),
+
+    (Digit,
+        (
+        (TestHarness.display, ("X",)), #Non-numeric
+        (TestHarness.compare, ("0",), ""),
+        (TestHarness.compare, ("9",), ""),
+        )),
+
+    (Integer,
+        (
+        (TestHarness.display, ("+17",)), #+ not allowed
+        (TestHarness.display, ("1d",)), #Non-numeric
+        (TestHarness.compare, ("17",), ""),
+        (TestHarness.compare, ("-17",), ""),
+        )),
+
+    (PositiveInteger,
+        (
+        (TestHarness.display, ("0",)), #Not positive
+        (TestHarness.display, ("-17",)), #Not positive
+        (TestHarness.display, ("1d",), ), #Non-numeric
+        (TestHarness.compare, ("17",), ""),
+        )),
+
+    (Number,
+        (
+        (TestHarness.display, ("+17",)), # + not allowed
+        (TestHarness.display, (".",)), #No digits
+        (TestHarness.display, ("1d",)), #Non-numeric
+        (TestHarness.compare, ("0",), ""),
+        (TestHarness.compare, ("17",), ""),
+        (TestHarness.compare, ("-17",), ""),
+        (TestHarness.compare, ("17.17",), ""),
+        (TestHarness.compare, ("-.17",), ""),
+        (TestHarness.compare, ("-17.17",), ""),
+        )),
+
+    (Character,
+        (
+        (TestHarness.display, ("",)), #Zero length string
+        (TestHarness.display, ("17",)), #More than one character
+        (TestHarness.display, (chr(ord(" ")-1),)), #0x1f
+        (TestHarness.display, (chr(ord("~")+1),)), #0x7f
+        (TestHarness.compare, (" ",), ""), #Bottom end of valid range
+        (TestHarness.compare, ("~",), ""), #Top end of valid range
+        )),
+
+    (String,
+        (
+        (TestHarness.display, (chr(ord(" ")-1))), #0x1f
+        (TestHarness.display, (chr(ord("~")+1))), #0x7f
+        (TestHarness.display, ("",)), #Zero length string
+        (TestHarness.compare, (" ",), ""), #Bottom end of valid range
+        (TestHarness.compare, ("~",), ""), #Top end of valid range
+        )),
+
+    (TBS,
+        (
+        (TestHarness.compare, ("Ignored",), ""),
+        )),
+
+    (Region,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.compare, ("AI",), ""),
+        (TestHarness.compare, ("ai",), ""),
+        )),
+
+    (AwardList,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.compare, ("DXCC",), ""),
+        (TestHarness.compare, ("dxcc",), ""),
+        )),
+
+    (SponsoredAwardList,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.compare, ("ARRL_",), ""),
+        (TestHarness.compare, ("arrl_",), ""),
+        )),
+
+    (MultilineString,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.compare, ("TEST",), ""),
+        )),
+
+    (Date,
+        (
+        (TestHarness.display, ("1956",)),
+        (TestHarness.display, ("20220000",)),
+        (TestHarness.display, ("20220100",)),
+        (TestHarness.display, ("20221332",)),
+        (TestHarness.display, ("20220229",)),
+        (TestHarness.display, ("20221032",)),
+        (TestHarness.compare, ("20221030",), ""),
+        )),
+
+    (Time,
+        (
+        (TestHarness.display, ("ABCDEF",)),
+        (TestHarness.display, ("00",)),
+        (TestHarness.display, ("00000000",)),
+        (TestHarness.display, ("2400",)),
+        (TestHarness.display, ("2360",)),
+        (TestHarness.display, ("240000",)),
+        (TestHarness.display, ("236000",)),
+        (TestHarness.display, ("230060",)),
+        (TestHarness.display, ("236060",)),
+        (TestHarness.display, ("246060",)),
+        (TestHarness.compare, ("0000",), ""),
+        (TestHarness.compare, ("2359",), ""),
+        (TestHarness.compare, ("000000",), ""),
+        (TestHarness.compare, ("235959",), ""),
+        )),
+
+    (Ant_Path,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.compare, ("O",), ""),
+        )),
+
+    (Location,
+        (
+        (TestHarness.display, ("W90 00.000",)),
+        (TestHarness.display, ("W090 0.000",)),
+        (TestHarness.display, ("W090 00.00",)),
+        (TestHarness.display, ("A000 00.000",)),
+        (TestHarness.display, ("W181 60.000",)),
+        (TestHarness.display, ("W180 01.000",)),
+        (TestHarness.display, ("W180 00.001",)),
+        (TestHarness.compare, ("N000 00.000",), ""),
+        (TestHarness.compare, ("S180 00.000",), ""),
+        (TestHarness.compare, ("E000 00.000",), ""),
+        (TestHarness.compare, ("W180 00.000",), ""),
+        )),
+
+    #Note that "Longitude" uses "Location" so no need to repeat those
+    #tests.
+    (Longitude,
+        (
+        (TestHarness.display, ("N000 00.000",)),
+        (TestHarness.compare, ("E000 00.000",), ""),
+        (TestHarness.compare, ("W180 00.000",), ""),
+        )),
+
+    #Note that "Latitude" uses "Location" so no need to repeat those
+    #tests.
+    (Latitude,
+        (
+        (TestHarness.display, ("W000 00.000",)),
+        (TestHarness.display, ("N091 00.000",)),
+        (TestHarness.display, ("S090 01.000",)),
+        (TestHarness.display, ("N090 00.001",)),
+        (TestHarness.compare, ("N000 00.000",), ""),
+        (TestHarness.compare, ("S090 00.000",), ""),
+        )),
+
+    (GridSquare,
+        (
+        (TestHarness.display, ("00",)),
+        (TestHarness.display, ("AS",)),
+        (TestHarness.display, ("AABB",)),
+        (TestHarness.display, ("AA00AY",)),
+        (TestHarness.display, ("XX99YY00",)),
+        (TestHarness.display, ("SSAAYYBB",)),
+        (TestHarness.compare, ("AA",), ""),
+        (TestHarness.compare, ("AA00",), ""),
+        (TestHarness.compare, ("AA00AA",), ""),
+        (TestHarness.compare, ("rr99xx99",), ""),
+        )),
+
+    (GridSquareList,
+        (
+        (TestHarness.display, ("AA, BB",)),
+        (TestHarness.compare, ("AA",), ""),
+        (TestHarness.compare, ("AA,rr",), ""),
+        )),
+
+    (Arrl_Sect,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.compare, ("CO",), ""),
+        (TestHarness.compare, ("vt",), ""),
+        )),
+
+    (Band,
+        (
+        (TestHarness.display, ("0M",)),
+        (TestHarness.compare, ("1.25M",), ""),
+        (TestHarness.compare, ("630m",), ""),
+        )),
+
+    (QSO_Upload_Status,
+        (
+        (TestHarness.display, ("X",)),
+        (TestHarness.compare, ("M",), ""),
+        (TestHarness.compare, ("y",), ""),
+        )),
+
+    (Continent,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.compare, ("AF",), ""),
+        (TestHarness.compare, ("oc",), ""),
+        )),
+
+    (Contest,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.compare, ("ARRL-10-GHZ",), ""),
+        (TestHarness.compare, ("wfd",), ""),
+        )),
+
+    (CreditList,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.display, ("TEST:TEST",)),
+        (TestHarness.display, ("WAS_SATELLITE:",)),
+        (TestHarness.display, ("WAS_SATELLITE:&",)),
+        (TestHarness.display, ("WAS_SATELLITE:TEST",)),
+        (TestHarness.display, ("WAS_SATELLITE:TEST1&TEST2",)),
+        (TestHarness.display, ("WAS_SATELLITE:LOTW&TEST",)),
+        (TestHarness.compare, ("CQWPX",), ""),
+        (TestHarness.compare, ("WAS_SATELLITE:CARD",), ""),
+        (TestHarness.compare, ("WAS_SATELLITE:CARD&LOTW",), ""),
+        )),
+
+    (CreditList_or_AwardList,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.display, ("TEST:TEST",)),
+        (TestHarness.display, ("WAS_SATELLITE:",)),
+        (TestHarness.display, ("WAS_SATELLITE:&",)),
+        (TestHarness.display, ("WAS_SATELLITE:TEST",)),
+        (TestHarness.display, ("WAS_SATELLITE:TEST1&TEST2",)),
+        (TestHarness.display, ("WAS_SATELLITE:LOTW&TEST",)),
+        (TestHarness.compare, ("CQWPX",), ""),
+        (TestHarness.compare, ("WAS_SATELLITE:CARD",), ""),
+        (TestHarness.compare, ("was_satellite:card&lotw&eqsl",), ""),
+        (TestHarness.compare, ("DXCC",), ""),
+        (TestHarness.compare, ("dxcc",), ""),
+        )),
+
+    (Dxcc,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.compare, ("291",), ""),
+        )),
+
+    (QSL_Rcvd,
+        (
+        (TestHarness.display, ("T",)),
+        (TestHarness.compare, ("Y",), ""),
+        )),
+
+    (QSL_Sent,
+        (
+        (TestHarness.display, ("T",)),
+        (TestHarness.compare, ("Y",), ""),
+        )),
+
+    (QSL_Via,
+        (
+        (TestHarness.display, ("T",)),
+        (TestHarness.compare, ("D",), ""),
+        )),
+
+    (Mode,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.compare, ("SSB",), ""),
+        )),
+
+    (WWFFRef,
+        (
+        (TestHarness.display, ("AFF-000",)),
+        (TestHarness.display, ("AFF-00000",)),
+        (TestHarness.compare, ("AFF-0000",), ""),
+        (TestHarness.compare, ("ABFF-0000",), ""),
+        (TestHarness.compare, ("ABCFF-0000",), ""),
+        (TestHarness.compare, ("abcdFF-9999",), ""),
+        )),
+
+    (userdef,
+        (
+        (TestHarness.display, ("USERDEF",)),
+        (TestHarness.display, ("USERDEF0",)),
+        (TestHarness.display, ("USERDEFX",)),
+        (TestHarness.compare, ("USERDEF1",), ""),
+        )),
+
+    (dictonary_duplicates,
+        (
+        (TestHarness.display, ({"AA":4, "aa":8},)),
+        (TestHarness.compare, ({"AA":4, "BB":8},), ""),
+        )),
+
+    (get_data_type_indicator,
+        (
+        (TestHarness.compare, (record_fields["ANT_AZ"],), "N"),
+        (TestHarness.compare, (record_fields["BAND"],), "E"),
+        )),
+
+    (valid_callsign,
+        (
+        (TestHarness.display, ("K0RLO/mobile",)),
+        (TestHarness.compare, ("JY1",), ""),
+        (TestHarness.compare, ("K0RLO",), ""),
+        (TestHarness.compare, ("W1JU",), ""),
+        (TestHarness.compare, ("VE7XYZ",), ""),
+        (TestHarness.compare, ("K0RLO/mobile", True,), ""),
+        )),
+
+    (field,
+        (
+        (TestHarness.compare, ("FOO", "BAR",), "<FOO:3>BAR"),
+        (TestHarness.compare, ("FOO", "BAR", "S",), "<FOO:3:S>BAR"),
+        )),
+
+    (validate_field,
+        (
+        (TestHarness.display, (record_fields, "TEST", "0")),
+        (TestHarness.display, (record_fields, "CQZ", "0")),
+        (TestHarness.display, (record_fields, "HRDLOG_QSO_UPLOAD_STATUS", "TEST")),
+        (TestHarness.display, (record_fields, "CREDIT_SUBMITTED", "TEST1,TEST2")),
+        (TestHarness.display, (record_fields, "CREDIT_SUBMITTED", "CQDX_QRP:TEST")),
+        (TestHarness.display, (record_fields, "CREDIT_SUBMITTED", "CQDX_QRP:LOTW&TEST")),
+        (TestHarness.compare, (record_fields, "HRDLOG_QSO_UPLOAD_STATUS", "N"), ""),
+        (TestHarness.compare, (record_fields, "CQZ", "17"), ""),
+        (TestHarness.compare, (record_fields, "CREDIT_SUBMITTED", "CQDXFIELD_SATELLITE"), ""),
+        (TestHarness.compare, (record_fields, "CREDIT_SUBMITTED", "DXCC,USACA"), ""),
+        (TestHarness.compare, (record_fields, "CREDIT_SUBMITTED", "DXCC,CQDX_QRP:LOTW&CARD"), ""),
+        )),
+
+    (ADIF_record,
+        (
+        (TestHarness.exception, ({"TEST" : "TEST"},), "hamlibIOerror"),
+        (TestHarness.exception, ({"HRDLOG_QSO_UPLOAD_STATUS" : "TEST"},), "hamlibIOerror"),
+        (TestHarness.exception, ({"CREDIT_SUBMITTED" : "CQDX_QRP:LOTW&TEST"},), "hamlibIOerror"),
+        (TestHarness.exception, ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "hrdlog_qso_upload_status" : "Y"},), "hamlibIOerror"),
+        (TestHarness.compare, ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"},), "<HRDLOG_QSO_UPLOAD_STATUS:1>N<call:5>K0RLO<EOR>\n"),
+        (TestHarness.compare, ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}, 2,), "<HRDLOG_QSO_UPLOAD_STATUS:1>N  <call:5>K0RLO  <EOR>\n"),
+        (TestHarness.compare, ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}, 1, True),
+            "<HRDLOG_QSO_UPLOAD_STATUS:1:E>N <call:5:S>K0RLO <EOR>\n"),
+        )),
+
+    (ADIF_header,
+        (
+        (TestHarness.exception, ({"TEST" : "TEST"},), "hamlibIOerror"),
+        (TestHarness.exception, ({"CREATED_TIMESTAMP" : 7},), "hamlibIOerror"),
+        (TestHarness.compare, ({"PROGRAMID" : "pota_rapidlog", "CREATED_TIMESTAMP" : "19561030 120101", "ADIF_VER" : "0.0.0"}, None),
+            """<ADIF_VER:5>0.0.0
+<CREATED_TIMESTAMP:15>19561030 120101
+<PROGRAMID:13>pota_rapidlog
+<EOH>
+"""),
+        (TestHarness.compare, ({"PROGRAMID" : "pota_rapidlog", "CREATED_TIMESTAMP" : "19561030 120101", "ADIF_VER" : "0.0.0"}, None, True),
+            """<ADIF_VER:5:S>0.0.0
+<CREATED_TIMESTAMP:15:S>19561030 120101
+<PROGRAMID:13:S>pota_rapidlog
+<EOH>
+"""),
+        )),
+
+    (freq_to_band,
+        (
+        (TestHarness.display, ("0.1",)),
+        (TestHarness.display, ("250001",)),
+        (TestHarness.compare, ("0.1357",), ("2190M",)),
+        (TestHarness.compare, ("241000",), ("1MM",)),
+        (TestHarness.compare, ("250000",), ("1MM",)),
+        )),
+
+    (valid_band,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.display, ("14.0 14.2 14.3",)),
+        (TestHarness.display, ("13.7",)),
+        (TestHarness.compare, ("20m",), ["20m"]),
+        (TestHarness.compare, ("20m   40M",), ["20m", "40M"]),
+        (TestHarness.compare, ("2190M,  1mm",), ["2190M","1mm"]),
+        )),
+
+    (valid_frequency,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.display, ("7m",)),
+        (TestHarness.display, ("14 13",)),
+        (TestHarness.display, ("14.2.7",)),
+        (TestHarness.compare, ("14",), (['20M'], ['14'])),
+        (TestHarness.compare, ("14, 7",), (['20M', '40M'], ['14', '7'])),
+        )),
+
+    (valid_mode,
+        (
+        (TestHarness.display, ("TEST",)),
+        (TestHarness.display, ("TEST test TEST",)),
+        (TestHarness.display, ("OLIVIA TEST",)),
+        (TestHarness.display, ("SSB USB TEST",)),
+        (TestHarness.compare, ("SSB",), ('SSB',)),
+        (TestHarness.compare, ("SSB USB",), ('SSB', 'USB')),
+        (TestHarness.compare, ("USB",), ('SSB', 'USB')),
+        (TestHarness.compare, ("OLIVIA OLIVIA    32/1000",), ('OLIVIA', 'OLIVIA 32/1000')),
+        )),
+    )
+
+def run_tests():
+    #
+    #Run all validation tests
+    #
+    TestHarness.TestHarness(__name__, validation_tests)
+

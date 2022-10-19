@@ -1,9 +1,7 @@
-#!/usr/bin/python3
-
 ########################################################################
 ########################################################################
 ####
-#### Validate all functions and error detection in hamlibIO.py
+#### Test harness for testing functions in other routines
 ####
 ########################################################################
 ########################################################################
@@ -12,7 +10,6 @@
 #### Import support modules
 ####
 
-import hamlibIO
 import re
 import sys
 
@@ -59,9 +56,8 @@ def type_to_text(xlate) -> str:
 
 def execute_function(function2test, args):
 
-    test_call = "{}({})".format(function2test, args)
     try:
-        return(None, eval(test_call))
+        return(None, function2test(*args))
 
     except Exception as ex:
         #
@@ -185,37 +181,36 @@ Received data:
 
     return False
 
-validation_mapping = {
-    compare : "compare",
-    display : "display",
-    exception : "exception"
-    }
-    
+validation_mapping = (compare, display, exception)
 
-
-def run_tests(module_name, test_list):
+def TestHarness(module_name, validation_tests):
     total = 0
+    test_number = 0
     total_errors = []
-    for (sort_num, function), arguments in sorted(test_list.items()):
+    for (function, test_list) in validation_tests:
+        test_number += 1
         #
         #Build the name of the function to test in the calling module.
         #
-        function_under_test = module_name + "." + function
+        try:
+            function_name = function.__name__
+        except:
+            raise TestHarness("Function.__name__ does not exist.")
 
-        if not callable(eval(function_under_test)):
+        if not callable(function):
             #
-            #The function name to test is not callable, throw exception
+            #The function is not callable, throw exception
             #
-            msg = """Function "{}" not callable, cannot test.""".format(function_under_test)
+            msg = 'Function "{}" is not callable, cannot test.'.format(function_name)
             raise TestHarness(msg)
 
-        subtest = 0
-        for test_args in arguments:
+        subtest_number = 0
+        for test_args in test_list:
             #
             #Build test number in case we need to report any errors
             #
-            subtest += 1
-            test_number = "{}-{}".format(sort_num, subtest)
+            subtest_number += 1
+            test_string = "{} - {}".format(test_number, subtest_number)
             #
             #Make sure we have the right number of arguments
             #
@@ -223,55 +218,79 @@ def run_tests(module_name, test_list):
                 #
                 #Not enough arguments
                 #
-                msg = "Test {} must have 2-3 arguments".format(test_number)
+                msg = "Test {} must have 2-3 arguments".format(test_string)
                 raise TestHarness(mgs)
 
             #
-            #Splitup tuple and set data_expected to "None" if no data
-            #expected.
+            #If only two arguments add "None" to end.
             #
             if len(test_args) == 2:
-                #
-                #Splitup tuple and set 
-                (test_function, arguments) = test_args
-                data_expected = None
-            else:
-                (test_function, arguments, data_expected) = test_args
+                test_args = list(test_args) + [None]
+
+            #
+            #Split out test function, arguments and expected data
+            #
+            (test_function, arguments, data_expected) = test_args
 
             #
             #Make sure a valid test function was specified
             #
             if test_function not in validation_mapping:
-                msg = """Test {}, not a valid test function""".format(test_number)
+                msg = """Test {}, not a valid test function""".format(test_string)
                 raise TestHarness(msg)
 
             #
-            #Build the full call to the testing function except for the
-            #data to compare against (if any) and leave off the closing )
-            #for printing purposes (we don't want to print expected data in
-            #case it's long and complex)
+            #Make the arguments [somewhat] pretty
             #
-            test_call = "{}( {}( {} )".format(
-                validation_mapping[test_function],
-                function_under_test,
-                arguments)
+            comma = ","
+            args = ""
+            for index in range(len(arguments)):
+                arg = arguments[index]
+
+                #
+                #If it's a string, put ', " or """s around it so it can
+                #be cut and pasted as a legitimate string.
+                #
+                if isinstance(arg, str):
+                    single = re.search(r"'", arg)
+                    double = re.search(r'"', arg)
+                    if re.search(r'\n', arg) or (single and double):
+                        quotes = '"""'
+                    elif double:
+                        quotes = "'"
+                    else:
+                        quotes = '"'
+                else:
+                    quotes = ""
+
+                #
+                #Remove the comma after the last argument
+                #
+                if index == (len(arguments) - 1):
+                    comma = ""
+
+                #
+                #Build a nice looking argument list
+                #
+                args += "    {0}{1}{0}{2}\n".format(quotes, arg, comma)
 
             #
             #Print the test call (without expected data) for logging purposes
             #
-            print("""
-    Test {} - {}: {}( {} )
-    """.format(test_number, validation_mapping[test_function], function_under_test, arguments))
+            print("""Test {} : {}
+
+{}(
+{}    )""".format(test_string, test_function.__name__, function_name, args))
 
             #
             #Execute the test function which will call the function under
             #test. 
             #
-            if test_function(function_under_test, arguments, data_expected):
+            if test_function(function, arguments, data_expected):
                 print(80 * "." + "\n")
             else:
                 print(80 * "X" + "\n")
-                total_errors.append(test_number)
+                total_errors.append(test_string)
 
             #
             #Increment number of tests sucessfully performed (note that
