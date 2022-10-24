@@ -38,29 +38,6 @@ import hamlibIO
 #This is the order that the ADIF tags will be placed into the file for
 #consistency
 #
-adif_tag_support_and_order = (
-    "QSO_DATE",
-    "TIME_ON",
-    "STATION_CALLSIGN",
-    "OPERATOR",
-    "CALL",
-    "BAND",
-    "BAND_RX",
-    "MODE",
-    "SUBMODE",
-    "MY_SIG",
-    "MY_SIG_INFO",
-    "MY_STATE",
-    "SIG",
-    "SIG_INFO",
-    "RST_SENT",
-    "RST_RCVD",
-    "FREQ",
-    "FREQ_RX",
-    "TX_PWR",
-    "RX_PWR",
-    "COMMENT"
-    )
 
 band_tags = (
     "BAND",
