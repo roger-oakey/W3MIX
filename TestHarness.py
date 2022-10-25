@@ -70,6 +70,7 @@ def format_argument(module_name, argument):
         if isinstance(argument, type):
             if arg == "NoneType":
                 return("type(None)")
+            return arg
 
         return module_name + "." + arg
 
@@ -264,10 +265,21 @@ Received data:
 validation_mapping = (compare, display, exception)
 
 def TestHarness(module_name, validation_tests):
+
+    if not isinstance(module_name, str):
+        raise TestHarnessError("module_name must be string")
+
+    if not isinstance(validation_tests, (tuple, list)):
+        raise TestHarnessError("validation_tests must be tuple or list")
+
     total = 0
     test_number = 0
     total_errors = []
     for function_and_tests in validation_tests:
+
+        if not isinstance(function_and_tests, (tuple, list)):
+            raise TestHarnessError("function_and_tests must be tuple or list")
+
         test_number += 1
         #
         #Build the name of the function to test in the calling module.
@@ -285,6 +297,18 @@ def TestHarness(module_name, validation_tests):
             msg = 'Function "{}" is not callable, cannot test.'.format(function_name)
             raise TestHarnessError(msg)
 
+        #
+        #Zip through the validation_tests to assure they're all
+        #correctly nested tuples and/or lists
+        #
+        try:
+            subtest_number = 1
+            for test_function, arguments, data_expected in function_and_tests[1:]:
+                subtest_number += 1
+        except:
+            msg = "Test {} - {}: Expected tuple with 3 elements: test_function, arguments and data_expected".format(test_number, subtest_number)
+            raise TestHarnessError(msg)
+
         subtest_number = 0
         for test_function, arguments, data_expected in function_and_tests[1:]:
             #
@@ -300,6 +324,9 @@ def TestHarness(module_name, validation_tests):
                 msg = """Test {}, not a valid test function""".format(test_string)
                 raise TestHarnessError(msg)
 
+            if not isinstance(arguments, (tuple, list)):
+                raise TestHarnessError("arguments must be tuple or list")
+
             #
             #Make the arguments [somewhat] pretty
             #
@@ -312,19 +339,21 @@ def TestHarness(module_name, validation_tests):
             #
             #Print the test call (without expected data) for logging purposes
             #
-            print("""Test {} : {}
+            print("""{0:>80s}
+Test {1} : {2}
 
-{}({}
-    )""".format(test_string, test_function.__name__, function_name, args))
+{3}.{0}({4}
+    )""".format(function_name, test_string, test_function.__name__,
+            module_name, args))
 
             #
             #Execute the test function which will call the function under
             #test. 
             #
             if test_function(function, arguments, data_expected):
-                print(80 * "." + "\n")
+                print(80 * ".")
             else:
-                print(80 * "X" + "\n")
+                print(80 * "X")
                 total_errors.append(test_string)
 
             #
@@ -342,6 +371,8 @@ def TestHarness(module_name, validation_tests):
         print("Failed test numbers: " + failed_tests)
     else:
         print("No failed tests")
+
+    return len(failed_tests)
 
 def test_test(what_to_do):
     if what_to_do:
@@ -376,37 +407,31 @@ validation_tests = (
             (__name__, 7),
             "7"
         ),
-
         (
         compare,
             (__name__, "Foo"),
             '"Foo"'
         ),
-
         (
         compare,
             (__name__, (1,2)),
             "(1,2)"
         ),
-
         (
         compare,
             (__name__, [2,3]),
             "[2,3]"
         ),
-
         (
         compare,
             (__name__, test_test),
             "TestHarness.test_test"
         ),
-
         (
         compare,
             (__name__, {test_test:format_argument, format_argument:test_test}),
             "{TestHarness.test_test:TestHarness.format_argument,TestHarness.format_argument:TestHarness.test_test}"
         ),
-
         (
         compare,
             (__name__, {7:7, "foo":"bar", format_argument:test_test, (1,2):[10,20]}),
@@ -434,34 +459,129 @@ validation_tests = (
     ),
 
     (
-    test_test,
-        (
-        exception,
-            (None,),
-            "TestHarness.TestHarnessError"
-        ), #Expected exception
-
-        (
-        compare,
-            ("(1,2,3)",),
-            (1,2,3)
-        ),
-
-        (
-        display,
-            ('"This should be printed"',),
-            '"This should be printed" should be printed'
-        ),
-    ),
-
-    (
     noexception,
         (
         compare,
             (type_to_text, (dict,)),
             (False, "dict")
         ),
-    )
+    ),
+
+    (
+    exception,
+        (
+        compare,
+            (test_test, ("4 / 0",), "ZeroDivisionError"),
+            True
+        ),
+        (
+        compare,
+            (test_test, ("4 / 2",), "TEST"),
+            False
+        ),
+    ),
+
+    (
+    display,
+        (
+        compare,
+            (test_test, ("4 / 2",), 'Should display "2.0"'),
+            True
+        ),
+
+    ),
+
+    (
+    compare,
+        (
+        compare,
+            (test_test, ("4 / 2",), 2.0),
+            True
+        ),
+        (
+        compare,
+            (test_test, ("4 / 2",), 3.0),
+            False
+        ),
+        (
+        compare,
+            (test_test, ("4 / 2",), 'Should display "2.0"'),
+            False
+        ),
+    ),
+
+    (
+    TestHarness,
+        (
+        exception,
+            (17, "TEST"),
+            "TestHarness.TestHarnessError"
+        ),
+        (
+        exception,
+            (__name__, "TEST"),
+            "TestHarness.TestHarnessError"
+        ),
+        (
+        exception,
+            (__name__, ("TEST",)),
+            "TestHarness.TestHarnessError"
+        ),
+        (
+        exception,
+            (__name__, (("TEST",),)),
+            "TestHarness.TestHarnessError"
+        ),
+        (
+        exception,
+            (__name__, ((test_test,(display,)),)),
+            "TestHarness.TestHarnessError"
+        ),
+        (
+        exception,
+            (__name__, ((test_test,(display,("2 * 4",))),)),
+            "TestHarness.TestHarnessError"
+        ),
+        (
+        exception,
+            (__name__, ((test_test,(display,("2 * 4",),"TEST","TEST")),)),
+            "TestHarness.TestHarnessError"
+        ),
+        (
+        exception,
+            (__name__, ((test_test,(test_test,("2 * 4",),None)),)),
+            "TestHarness.TestHarnessError"
+        ),
+        (
+        exception,
+            (__name__, ((test_test,(display,"TEST",None)),)),
+            "TestHarness.TestHarnessError"
+        ),
+        (
+        compare,
+            (__name__, ((test_test,(compare,("2 * 4",),8)),)),
+            0
+        ),
+    ),
+
+    (
+    test_test,
+        (
+        exception,
+            (None,),
+            "TestHarness.TestHarnessError"
+        ), #Expected exception
+        (
+        compare,
+            ("(1,2,3)",),
+            (1,2,3)
+        ),
+        (
+        display,
+            ('"This should be printed"',),
+            '"This should be printed" should be printed'
+        ),
+    ),
 )
 
 def run_tests():
