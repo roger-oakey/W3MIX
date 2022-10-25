@@ -6216,438 +6216,1342 @@ Error: "{}" is an invalid mode or submode.
 #
 
 validation_tests = (
-    (type_xlate,
+    (
+    type_xlate,
         (
-        (TestHarness.exception, ("TEST",), "hamlibIOerror"), #Not a type
-        (TestHarness.compare, (type(None),), "None"),
-        (TestHarness.compare, (dict,), "dict"),
-        )),
+        TestHarness.exception,
+            ("TEST",),
+            "hamlibIO.hamlibIOerror"
+        ), #Not a type
+        (
+        TestHarness.compare,
+            (type(None),),
+            "None"
+        ),
+        (
+        TestHarness.compare,
+            (dict,),
+            "dict"
+        ),
+    ),
+    (
+    validate_arg_type,
+        (
+        TestHarness.exception,
+            ("TEST",),
+            "hamlibIO.hamlibIOerror"
+        ),
+        (
+        TestHarness.exception,
+            ("[]", ),
+            "hamlibIO.hamlibIOerror"
+        ),
+        (
+        TestHarness.exception,
+            ((("TEST",)),),
+            "hamlibIO.hamlibIOerror"
+        ),
+        (
+        TestHarness.exception,
+            (((("TEST", str), ())),),
+            "hamlibIO.hamlibIOerror"
+        ),
+        (
+        TestHarness.exception,
+            ((("TEST", str, str),),),
+            "hamlibIO.hamlibIOerror"
+        ),
+        (
+        TestHarness.exception,
+            ((("TEST", "TEST"),),),
+            "hamlibIO.hamlibIOerror"
+        ),
+    ),
+    (
+    Boolean,
+        (
+        TestHarness.display,
+            ("X",),
+            "Not one of YyNn"
+        ),
+        (
+        TestHarness.compare,
+            ("Y",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("y",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("N",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("n",),
+            ""
+        ),
+    ),
+    (
+    Digit,
+        (
+        TestHarness.display,
+            ("X",),
+            "Non-numeric"
+        ),
+        (
+        TestHarness.compare,
+            ("0",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("9",),
+            ""
+        ),
+    ),
 
-    (validate_arg_type,
+    (
+    Integer,
         (
-        (TestHarness.exception, ("TEST",), "hamlibIOerror"),
-        (TestHarness.exception, ("[]", ), "hamlibIOerror"),
-        (TestHarness.exception, ((("TEST",)),), "hamlibIOerror"),
-        (TestHarness.exception, (((("TEST", str), ())),), "hamlibIOerror"),
-        (TestHarness.exception, ((("TEST", str, str),),), "hamlibIOerror"),
-        (TestHarness.exception, ((("TEST", "TEST"),),), "hamlibIOerror"),
-        )),
+        TestHarness.display,
+            ("+17",),
+            "Plus (+)  not allowed"
+        ),
+        (
+        TestHarness.display,
+            ("1d",),
+            "Non-numeric character"
+        ),
+        (
+        TestHarness.compare,
+            ("17",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("-17",),
+            ""
+        ),
+    ),
 
-    (Boolean,
+    (
+    PositiveInteger,
         (
-        (TestHarness.display, ("X",), ), #Not one of YyNn
-        (TestHarness.compare, ("Y",), ""),
-        (TestHarness.compare, ("y",), ""),
-        (TestHarness.compare, ("N",), ""),
-        (TestHarness.compare, ("n",), ""),
-        )),
+        TestHarness.display,
+            ("0",),
+            "Not a positive number"
+        ),
+        (
+        TestHarness.display,
+            ("-17",),
+            "Not a positive number"
+        ),
+        (
+        TestHarness.display,
+            ("1d",),
+            "Non-numeric character"
+        ),
+        (
+        TestHarness.compare,
+            ("17",),
+             ""
+        ),
+    ),
 
-    (Digit,
+    (
+    Number,
         (
-        (TestHarness.display, ("X",)), #Non-numeric
-        (TestHarness.compare, ("0",), ""),
-        (TestHarness.compare, ("9",), ""),
-        )),
+        TestHarness.display,
+            ("",),
+            "Zero-length string"
+        ),
+        (
+        TestHarness.display,
+            ("+17",),
+            "Plus (+)  not allowed"
+        ),
+        (
+        TestHarness.display,
+            (".",),
+            "Must have digits"
+        ),
+        (
+        TestHarness.display,
+            ("1d",),
+            "Non-numeric character"
+        ),
+        (
+        TestHarness.compare,
+            ("0",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("17",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("-17",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("17.17",),
+            ""
+        ),
+        (TestHarness.compare,
+            ("-.17",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("-17.17",),
+            ""
+        ),
+    ),
 
-    (Integer,
+    (
+    Character,
         (
-        (TestHarness.display, ("+17",)), #+ not allowed
-        (TestHarness.display, ("1d",)), #Non-numeric
-        (TestHarness.compare, ("17",), ""),
-        (TestHarness.compare, ("-17",), ""),
-        )),
+        TestHarness.display,
+            ("",),
+            "Zero-length string"
+        ),
+        (
+        TestHarness.display,
+            ("17",),
+            "More than one character"
+        ),
+        (
+        TestHarness.display,
+            (chr(ord(" ")-1),),
+            "0x1f - one character less than valid range"
+        ),
+        (
+        TestHarness.display,
+            (chr(ord("~")+1),),
+            "0x7f - one character more than valid range"
+        ),
+        (
+        TestHarness.compare,
+            (" ",),
+            ""
+        ), #Bottom end of valid range
+        (
+        TestHarness.compare,
+            ("~",),
+            ""
+        ), #Top end of valid range
+    ),
 
-    (PositiveInteger,
+    (
+    String,
         (
-        (TestHarness.display, ("0",)), #Not positive
-        (TestHarness.display, ("-17",)), #Not positive
-        (TestHarness.display, ("1d",), ), #Non-numeric
-        (TestHarness.compare, ("17",), ""),
-        )),
+        TestHarness.display,
+            (chr(ord(" ")-1),),
+            "0x1f - one character less than valid range"
+        ),
+        (
+        TestHarness.display,
+            (chr(ord("~")+1),),
+            "0x7f - one character more than valid range"
+        ),
+        (
+        TestHarness.display,
+            ("",),
+            "Zero-length string"
+        ),
+        (
+        TestHarness.compare,
+            (" ",),
+            ""
+        ), #Bottom end of valid range
+        (
+        TestHarness.compare,
+            ("~",),
+            ""
+        ), #Top end of valid range
+    ),
 
-    (Number,
+    (
+    TBS,
         (
-        (TestHarness.display, ("+17",)), # + not allowed
-        (TestHarness.display, (".",)), #No digits
-        (TestHarness.display, ("1d",)), #Non-numeric
-        (TestHarness.compare, ("0",), ""),
-        (TestHarness.compare, ("17",), ""),
-        (TestHarness.compare, ("-17",), ""),
-        (TestHarness.compare, ("17.17",), ""),
-        (TestHarness.compare, ("-.17",), ""),
-        (TestHarness.compare, ("-17.17",), ""),
-        )),
+        TestHarness.compare,
+            ("Ignored",),
+            ""
+        ),
+    ),
 
-    (Character,
+    (
+    Region,
         (
-        (TestHarness.display, ("",)), #Zero length string
-        (TestHarness.display, ("17",)), #More than one character
-        (TestHarness.display, (chr(ord(" ")-1),)), #0x1f
-        (TestHarness.display, (chr(ord("~")+1),)), #0x7f
-        (TestHarness.compare, (" ",), ""), #Bottom end of valid range
-        (TestHarness.compare, ("~",), ""), #Top end of valid range
-        )),
+        TestHarness.display,
+        ("TEST",),
+        "Invalid region"
+        ),
+        (
+        TestHarness.compare,
+            ("AI",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("ai",),
+            ""
+        ),
+    ),
 
-    (String,
+    (
+    AwardList,
         (
-        (TestHarness.display, (chr(ord(" ")-1))), #0x1f
-        (TestHarness.display, (chr(ord("~")+1))), #0x7f
-        (TestHarness.display, ("",)), #Zero length string
-        (TestHarness.compare, (" ",), ""), #Bottom end of valid range
-        (TestHarness.compare, ("~",), ""), #Top end of valid range
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Invalid award list"
+        ),
+        (
+        TestHarness.compare,
+            ("DXCC",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("dxcc",),
+            ""
+        ),
+    ),
 
-    (TBS,
+    (
+    SponsoredAwardList,
         (
-        (TestHarness.compare, ("Ignored",), ""),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Invalid sponsored award list"
+        ),
+        (
+        TestHarness.compare,
+            ("ARRL_",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("arrl_",),
+            ""
+        ),
+    ),
 
-    (Region,
+    (
+    MultilineString,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.compare, ("AI",), ""),
-        (TestHarness.compare, ("ai",), ""),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Placeholder for further tests once implemented"
+        ),
+        (
+        TestHarness.compare,
+            ("TEST",),
+            ""
+        ),
+    ),
 
-    (AwardList,
+    (
+    Date,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.compare, ("DXCC",), ""),
-        (TestHarness.compare, ("dxcc",), ""),
-        )),
+        TestHarness.display,
+            ("1956",),
+            "Only year specified"
+        ),
+        (
+        TestHarness.display,
+            ("20220000",),
+            "Invalid month and day"
+        ),
+        (
+        TestHarness.display,
+            ("20220100",),
+            "Invalid day"
+        ),
+        (
+        TestHarness.display,
+            ("20221332",),
+            "Invalid month"
+        ),
+        (
+        TestHarness.display,
+            ("20220229",),
+            "Invalid February day for 2022"
+        ),
+        (
+        TestHarness.display,
+            ("20221032",),
+            "Invalid October day"
+        ),
+        (
+        TestHarness.compare,
+            ("20221030",),
+            ""
+        ),
+    ),
 
-    (SponsoredAwardList,
+    (
+    Time,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.compare, ("ARRL_",), ""),
-        (TestHarness.compare, ("arrl_",), ""),
-        )),
+        TestHarness.display,
+            ("ABCDEF",),
+            "Invalid characters for time"
+        ),
+        (
+        TestHarness.display,
+            ("00",),
+            "Not enough digits for time"
+        ),
+        (
+        TestHarness.display,
+            ("00000000",),
+            "Too many digits for time"
+        ),
+        (
+        TestHarness.display,
+            ("2400",),
+            "Invalid hour for time"
+        ),
+        (
+        TestHarness.display,
+            ("2360",),
+            "Invalid minutes for time"
+        ),
+        (
+        TestHarness.display,
+            ("240000",),
+            "Invalid hour for time"
+        ),
+        (
+        TestHarness.display,
+            ("236000",),
+            "Invalid minute for time"
+        ),
+        (
+        TestHarness.display,
+            ("230060",),
+            "Invalid seconds for time"
+        ),
+        (
+        TestHarness.display,
+            ("236060",),
+            "Invalid minutes and seconds for time"
+        ),
+        (
+        TestHarness.display,
+            ("246060",),
+            "Invalid hour, minte and seconds for time"
+        ),
+        (
+        TestHarness.compare,
+        ("0000",), ""),
+        (
+        TestHarness.compare,
+        ("2359",), ""),
+        (
+        TestHarness.compare,
+            ("000000",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("235959",),
+            ""
+        ),
+    ),
 
-    (MultilineString,
+    (
+    Ant_Path,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.compare, ("TEST",), ""),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Invalid antenna path"
+        ),
+        (
+        TestHarness.compare,
+            ("O",),
+            ""
+        ),
+    ),
 
-    (Date,
+    (
+    Location,
         (
-        (TestHarness.display, ("1956",)),
-        (TestHarness.display, ("20220000",)),
-        (TestHarness.display, ("20220100",)),
-        (TestHarness.display, ("20221332",)),
-        (TestHarness.display, ("20220229",)),
-        (TestHarness.display, ("20221032",)),
-        (TestHarness.compare, ("20221030",), ""),
-        )),
-
-    (Time,
+        TestHarness.display,
+            ("W90 00.000",),
+            "90 degrees invalid"
+        ),
         (
-        (TestHarness.display, ("ABCDEF",)),
-        (TestHarness.display, ("00",)),
-        (TestHarness.display, ("00000000",)),
-        (TestHarness.display, ("2400",)),
-        (TestHarness.display, ("2360",)),
-        (TestHarness.display, ("240000",)),
-        (TestHarness.display, ("236000",)),
-        (TestHarness.display, ("230060",)),
-        (TestHarness.display, ("236060",)),
-        (TestHarness.display, ("246060",)),
-        (TestHarness.compare, ("0000",), ""),
-        (TestHarness.compare, ("2359",), ""),
-        (TestHarness.compare, ("000000",), ""),
-        (TestHarness.compare, ("235959",), ""),
-        )),
-
-    (Ant_Path,
+        TestHarness.display,
+            ("W090 0.000",),
+            "Two digits must preceed decimal (.) point"
+        ),
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.compare, ("O",), ""),
-        )),
-
-    (Location,
+        TestHarness.display,
+            ("W090 00.00",),
+            "Three digits must follow decimal (.) point"
+        ),
         (
-        (TestHarness.display, ("W90 00.000",)),
-        (TestHarness.display, ("W090 0.000",)),
-        (TestHarness.display, ("W090 00.00",)),
-        (TestHarness.display, ("A000 00.000",)),
-        (TestHarness.display, ("W181 60.000",)),
-        (TestHarness.display, ("W180 01.000",)),
-        (TestHarness.display, ("W180 00.001",)),
-        (TestHarness.compare, ("N000 00.000",), ""),
-        (TestHarness.compare, ("S180 00.000",), ""),
-        (TestHarness.compare, ("E000 00.000",), ""),
-        (TestHarness.compare, ("W180 00.000",), ""),
-        )),
+        TestHarness.display,
+            ("A000 00.000",),
+            "Invalid cardinal direction"
+        ),
+        (
+        TestHarness.display,
+            ("W181 60.000",),
+            "Longitude cannot exceed 180 degrees and minutes must be less than 60"
+        ),
+        (
+        TestHarness.display,
+            ("W180 01.000",),
+            "Longitude annot exceed 180 degrees"
+        ),
+        (
+        TestHarness.display,
+            ("W180 00.001",),
+            "Longitude annot exceed 180 degrees"
+        ),
+        (
+        TestHarness.compare,
+            ("N000 00.000",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("S180 00.000",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("E000 00.000",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("W180 00.000",),
+            ""
+        ),
+    ),
 
     #Note that "Longitude" uses "Location" so no need to repeat those
     #tests.
-    (Longitude,
+    (
+    Longitude,
         (
-        (TestHarness.display, ("N000 00.000",)),
-        (TestHarness.compare, ("E000 00.000",), ""),
-        (TestHarness.compare, ("W180 00.000",), ""),
-        )),
+        TestHarness.display,
+            ("N000 00.000",),
+            'Longitude can only be "E" or "W"'
+        ),
+        (
+        TestHarness.compare,
+            ("E000 00.000",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("W180 00.000",),
+            ""
+        ),
+    ),
 
     #Note that "Latitude" uses "Location" so no need to repeat those
     #tests.
-    (Latitude,
+    (
+    Latitude,
         (
-        (TestHarness.display, ("W000 00.000",)),
-        (TestHarness.display, ("N091 00.000",)),
-        (TestHarness.display, ("S090 01.000",)),
-        (TestHarness.display, ("N090 00.001",)),
-        (TestHarness.compare, ("N000 00.000",), ""),
-        (TestHarness.compare, ("S090 00.000",), ""),
-        )),
+        TestHarness.display,
+            ("W000 00.000",),
+            'Latitude can only be "N" or "S"'
+        ),
+        (
+        TestHarness.display,
+            ("N091 00.000",),
+            "Latitude cannot exceed 90 degrees"
+        ),
+        (
+        TestHarness.display,
+            ("S090 01.000",),
+            "Latitude cannot exceed 90 degrees"
+        ),
+        (
+        TestHarness.display,
+            ("N090 00.001",),
+            "Latitude cannot exceed 90 degrees"
+        ),
+        (
+        TestHarness.compare,
+            ("N000 00.000",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("S090 00.000",),
+            ""
+        ),
+    ),
+    (
+    GridSquare,
+        (
+        TestHarness.display,
+            ("00",),
+            "First two characters must be letters"
+        ),
+        (
+        TestHarness.display,
+            ("AS",),
+            'First letters must be less than "R"'
+        ),
+        (
+        TestHarness.display,
+            ("AABB",),
+            "Characters 2 & 3 must be digits"
+        ),
+        (
+        TestHarness.display,
+            ("AA00AY",),
+            'Letters 5 & 6 must be less than "X"'
+        ),
+        (
+        TestHarness.display,
+            ("XX99YY00",),
+            "Every field wrong"
+        ),
+        (
+        TestHarness.display,
+            ("SSAAYYBB",),
+            "Every field wrong"
+        ),
+        (
+        TestHarness.compare,
+            ("AA",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("AA00",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("AA00AA",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("rr99xx99",),
+            ""
+        ),
+    ),
 
-    (GridSquare,
+    (
+    GridSquareList,
         (
-        (TestHarness.display, ("00",)),
-        (TestHarness.display, ("AS",)),
-        (TestHarness.display, ("AABB",)),
-        (TestHarness.display, ("AA00AY",)),
-        (TestHarness.display, ("XX99YY00",)),
-        (TestHarness.display, ("SSAAYYBB",)),
-        (TestHarness.compare, ("AA",), ""),
-        (TestHarness.compare, ("AA00",), ""),
-        (TestHarness.compare, ("AA00AA",), ""),
-        (TestHarness.compare, ("rr99xx99",), ""),
-        )),
+        TestHarness.display,
+            ("AA, BB",),
+            "No blanks allowed in list"
+        ),
+        (
+        TestHarness.compare,
+            ("AA",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("AA,rr",),
+            ""
+        ),
+    ),
 
-    (GridSquareList,
+    (
+    Arrl_Sect,
         (
-        (TestHarness.display, ("AA, BB",)),
-        (TestHarness.compare, ("AA",), ""),
-        (TestHarness.compare, ("AA,rr",), ""),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Invalid ARRL section"
+        ),
+        (
+        TestHarness.compare,
+            ("CO",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("vt",),
+            ""
+        ),
+    ),
 
-    (Arrl_Sect,
+    (
+    Band,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.compare, ("CO",), ""),
-        (TestHarness.compare, ("vt",), ""),
-        )),
+        TestHarness.display,
+            ("0M",),
+            "Invalid band"
+        ),
+        (
+        TestHarness.compare,
+            ("1.25M",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("630m",),
+            ""
+        ),
+    ),
 
-    (Band,
+    (
+    QSO_Upload_Status,
         (
-        (TestHarness.display, ("0M",)),
-        (TestHarness.compare, ("1.25M",), ""),
-        (TestHarness.compare, ("630m",), ""),
-        )),
+        TestHarness.display,
+            ("X",),
+            "Not a valid status"
+        ),
+        (
+        TestHarness.compare,
+            ("M",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("y",),
+            ""
+        ),
+    ),
 
-    (QSO_Upload_Status,
+    (
+    Continent,
+    
         (
-        (TestHarness.display, ("X",)),
-        (TestHarness.compare, ("M",), ""),
-        (TestHarness.compare, ("y",), ""),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Not a valid continent"
+        ),
+        (
+        TestHarness.compare,
+            ("AF",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("oc",),
+            ""
+        ),
+    ),
 
-    (Continent,
+    (
+    Contest,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.compare, ("AF",), ""),
-        (TestHarness.compare, ("oc",), ""),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Not a valid contest"
+        ),
+        (
+        TestHarness.compare,
+            ("ARRL-10-GHZ",),
+            ""
+        ),
+        (
+            TestHarness.compare,
+            ("wfd",),
+            ""
+        ),
+    ),
 
-    (Contest,
+    (
+    CreditList,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.compare, ("ARRL-10-GHZ",), ""),
-        (TestHarness.compare, ("wfd",), ""),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Invalid credit list"
+        ),
+        (
+        TestHarness.display,
+            ("TEST:TEST",),
+            "Invalid credit list"
+        ),
+        (
+        TestHarness.display,
+            ("WAS_SATELLITE:",),
+            "Partial credit list"
+        ),
+        (
+        TestHarness.display,
+            ("WAS_SATELLITE:&",),
+            "Partial credit list"
+        ),
+        (
+        TestHarness.display,
+            ("WAS_SATELLITE:TEST",),
+            "Invalid credit list"
+        ),
+        (
+        TestHarness.display,
+            ("WAS_SATELLITE:TEST1&TEST2",),
+            "Invalid credit list"
+        ),
+        (
+        TestHarness.display,
+            ("WAS_SATELLITE:LOTW&TEST",),
+            "Invalid credit list"
+        ),
+        (
+        TestHarness.compare,
+            ("CQWPX",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("WAS_SATELLITE:CARD",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("WAS_SATELLITE:CARD&LOTW",),
+            ""
+        ),
+    ),
 
-    (CreditList,
+    (
+    CreditList_or_AwardList,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.display, ("TEST:TEST",)),
-        (TestHarness.display, ("WAS_SATELLITE:",)),
-        (TestHarness.display, ("WAS_SATELLITE:&",)),
-        (TestHarness.display, ("WAS_SATELLITE:TEST",)),
-        (TestHarness.display, ("WAS_SATELLITE:TEST1&TEST2",)),
-        (TestHarness.display, ("WAS_SATELLITE:LOTW&TEST",)),
-        (TestHarness.compare, ("CQWPX",), ""),
-        (TestHarness.compare, ("WAS_SATELLITE:CARD",), ""),
-        (TestHarness.compare, ("WAS_SATELLITE:CARD&LOTW",), ""),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Invalid credit list or award list"
+        ),
+        (
+        TestHarness.display,
+            ("TEST:TEST",),
+            "Invalid credit list or award list"
+        ),
+        (
+        TestHarness.display,
+            ("WAS_SATELLITE:",),
+            "Invalid credit list or award list"
+        ),
+        (
+        TestHarness.display,
+            ("WAS_SATELLITE:&",),
+            "Invalid credit list or award list"
+        ),
+        (
+        TestHarness.display,
+            ("WAS_SATELLITE:TEST",),
+            "Invalid credit list or award list"
+        ),
+        (
+        TestHarness.display,
+            ("WAS_SATELLITE:TEST1&TEST2",),
+            "Invalid credit list or award list"
+        ),
+        (
+        TestHarness.display,
+            ("WAS_SATELLITE:LOTW&TEST",),
+            "Invalid credit list or award list"
+        ),
+        (
+        TestHarness.compare,
+            ("CQWPX",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("WAS_SATELLITE:CARD",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("was_satellite:card&lotw&eqsl",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("DXCC",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("dxcc",),
+            ""
+        ),
+    ),
 
-    (CreditList_or_AwardList,
+    (
+    Dxcc,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.display, ("TEST:TEST",)),
-        (TestHarness.display, ("WAS_SATELLITE:",)),
-        (TestHarness.display, ("WAS_SATELLITE:&",)),
-        (TestHarness.display, ("WAS_SATELLITE:TEST",)),
-        (TestHarness.display, ("WAS_SATELLITE:TEST1&TEST2",)),
-        (TestHarness.display, ("WAS_SATELLITE:LOTW&TEST",)),
-        (TestHarness.compare, ("CQWPX",), ""),
-        (TestHarness.compare, ("WAS_SATELLITE:CARD",), ""),
-        (TestHarness.compare, ("was_satellite:card&lotw&eqsl",), ""),
-        (TestHarness.compare, ("DXCC",), ""),
-        (TestHarness.compare, ("dxcc",), ""),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Not a valid DXCC value"
+        ),
+        (
+        TestHarness.compare,
+            ("291",),
+            ""
+        ),
+    ),
 
-    (Dxcc,
+    (
+    QSL_Rcvd,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.compare, ("291",), ""),
-        )),
+        TestHarness.display,
+            ("T",),
+            "Not a valid value"
+        ),
+        (
+        TestHarness.compare,
+            ("Y",),
+            ""
+        ),
+    ),
 
-    (QSL_Rcvd,
+    (
+    QSL_Sent,
         (
-        (TestHarness.display, ("T",)),
-        (TestHarness.compare, ("Y",), ""),
-        )),
+        TestHarness.display,
+            ("T",),
+            "Not a valid value"
+        ),
+        (
+        TestHarness.compare,
+            ("Y",),
+            ""
+        ),
+    ),
 
-    (QSL_Sent,
+    (
+    QSL_Via,
         (
-        (TestHarness.display, ("T",)),
-        (TestHarness.compare, ("Y",), ""),
-        )),
+        TestHarness.display,
+            ("T",),
+            "Not a valid value"
+        ),
+        (
+        TestHarness.compare,
+            ("D",),
+            ""
+        ),
+    ),
 
-    (QSL_Via,
+    (
+    Mode,
         (
-        (TestHarness.display, ("T",)),
-        (TestHarness.compare, ("D",), ""),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Not a valid mode"
+        ),
+        (
+        TestHarness.compare,
+            ("SSB",),
+            ""
+        ),
+    ),
 
-    (Mode,
+    (
+    WWFFRef,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.compare, ("SSB",), ""),
-        )),
+        TestHarness.display,
+            ("AFF-000",),
+            "Not a valid WWRef"
+        ),
+        (
+        TestHarness.display,
+            ("AFF-00000",),
+            "Not a valid WWRef"
+        ),
+        (
+        TestHarness.compare,
+            ("AFF-0000",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("ABFF-0000",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("ABCFF-0000",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("abcdFF-9999",),
+            ""
+        ),
+    ),
 
-    (WWFFRef,
+    (
+    userdef,
         (
-        (TestHarness.display, ("AFF-000",)),
-        (TestHarness.display, ("AFF-00000",)),
-        (TestHarness.compare, ("AFF-0000",), ""),
-        (TestHarness.compare, ("ABFF-0000",), ""),
-        (TestHarness.compare, ("ABCFF-0000",), ""),
-        (TestHarness.compare, ("abcdFF-9999",), ""),
-        )),
+        TestHarness.display,
+            ("USERDEF",),
+            "Not a valid user definition"
+        ),
+        (
+        TestHarness.display,
+            ("USERDEF0",),
+            "Not a valid user definition"
+        ),
+        (
+        TestHarness.display,
+            ("USERDEFX",),
+            "Not a valid user definition"
+        ),
+        (
+        TestHarness.compare,
+            ("USERDEF1",),
+            ""
+        ),
+    ),
 
-    (userdef,
+    (
+    dictonary_duplicates,
         (
-        (TestHarness.display, ("USERDEF",)),
-        (TestHarness.display, ("USERDEF0",)),
-        (TestHarness.display, ("USERDEFX",)),
-        (TestHarness.compare, ("USERDEF1",), ""),
-        )),
+        TestHarness.display,
+            ({"AA":4, "aa":8},),
+            "Keys only differ by character case"
+        ),
+        (
+        TestHarness.compare,
+            ({"AA":4, "BB":8},),
+            ""
+        ),
+    ),
 
-    (dictonary_duplicates,
+    (
+    get_data_type_indicator,
         (
-        (TestHarness.display, ({"AA":4, "aa":8},)),
-        (TestHarness.compare, ({"AA":4, "BB":8},), ""),
-        )),
+        TestHarness.compare,
+            (record_fields["ANT_AZ"],),
+            "N"
+        ),
+        (
+        TestHarness.compare,
+            (record_fields["BAND"],),
+            "E"
+        ),
+    ),
 
-    (get_data_type_indicator,
+    (
+    valid_callsign,
+    
         (
-        (TestHarness.compare, (record_fields["ANT_AZ"],), "N"),
-        (TestHarness.compare, (record_fields["BAND"],), "E"),
-        )),
+        TestHarness.display,
+            ("K0RLO/mobile",),
+            "Slash not allowed"
+        ),
+        (
+        TestHarness.compare,
+            ("JY1",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("K0RLO",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("W1JU",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("VE7XYZ",),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            ("K0RLO/mobile", True),
+            ""
+        ),
+    ),
 
-    (valid_callsign,
-        (
-        (TestHarness.display, ("K0RLO/mobile",)),
-        (TestHarness.compare, ("JY1",), ""),
-        (TestHarness.compare, ("K0RLO",), ""),
-        (TestHarness.compare, ("W1JU",), ""),
-        (TestHarness.compare, ("VE7XYZ",), ""),
-        (TestHarness.compare, ("K0RLO/mobile", True,), ""),
-        )),
+    (
+    field,
+        (TestHarness.compare,
+            ("FOO", "BAR",),
+            "<FOO:3>BAR"
+        ),
+        (TestHarness.compare,
+            ("FOO", "BAR", "S",),
+            "<FOO:3:S>BAR"
+        ),
+    ),
 
-    (field,
+    (
+    validate_field,
+    
         (
-        (TestHarness.compare, ("FOO", "BAR",), "<FOO:3>BAR"),
-        (TestHarness.compare, ("FOO", "BAR", "S",), "<FOO:3:S>BAR"),
-        )),
+        TestHarness.display,
+            (record_fields, "TEST", "0"),
+            "Invalid field name"
+        ),
+        (
+        TestHarness.display,
+            (record_fields, "CQZ", "0"),
+            "Invalid value for field"
+        ),
+        (
+        TestHarness.display,
+            (record_fields, "HRDLOG_QSO_UPLOAD_STATUS", "TEST"),
+            "Invalid value for field"
+        ),
+        (
+        TestHarness.display,
+            (record_fields, "CREDIT_SUBMITTED", "TEST1,TEST2"),
+            "Invalid value for field"
+        ),
+        (
+        TestHarness.display,
+            (record_fields, "CREDIT_SUBMITTED", "CQDX_QRP:TEST"),
+            "Invalid value for field"
+        ),
+        (
+        TestHarness.display,
+            (record_fields, "CREDIT_SUBMITTED", "CQDX_QRP:LOTW&TEST"),
+            "Invalid value for field"
+        ),
+        (
+        TestHarness.compare,
+            (record_fields, "HRDLOG_QSO_UPLOAD_STATUS", "N"),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            (record_fields, "CQZ", "17"),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            (record_fields, "CREDIT_SUBMITTED", "CQDXFIELD_SATELLITE"),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            (record_fields, "CREDIT_SUBMITTED", "DXCC,USACA"),
+            ""
+        ),
+        (
+        TestHarness.compare,
+            (record_fields, "CREDIT_SUBMITTED", "DXCC,CQDX_QRP:LOTW&CARD"),
+            ""
+        ),
+    ),
 
-    (validate_field,
+    (
+    ADIF_record,
         (
-        (TestHarness.display, (record_fields, "TEST", "0")),
-        (TestHarness.display, (record_fields, "CQZ", "0")),
-        (TestHarness.display, (record_fields, "HRDLOG_QSO_UPLOAD_STATUS", "TEST")),
-        (TestHarness.display, (record_fields, "CREDIT_SUBMITTED", "TEST1,TEST2")),
-        (TestHarness.display, (record_fields, "CREDIT_SUBMITTED", "CQDX_QRP:TEST")),
-        (TestHarness.display, (record_fields, "CREDIT_SUBMITTED", "CQDX_QRP:LOTW&TEST")),
-        (TestHarness.compare, (record_fields, "HRDLOG_QSO_UPLOAD_STATUS", "N"), ""),
-        (TestHarness.compare, (record_fields, "CQZ", "17"), ""),
-        (TestHarness.compare, (record_fields, "CREDIT_SUBMITTED", "CQDXFIELD_SATELLITE"), ""),
-        (TestHarness.compare, (record_fields, "CREDIT_SUBMITTED", "DXCC,USACA"), ""),
-        (TestHarness.compare, (record_fields, "CREDIT_SUBMITTED", "DXCC,CQDX_QRP:LOTW&CARD"), ""),
-        )),
+        TestHarness.exception,
+            ({"TEST" : "TEST"},),
+            "hamlibIO.hamlibIOerror"
+        ),
+        (
+        TestHarness.exception,
+            ({"HRDLOG_QSO_UPLOAD_STATUS" : "TEST"},),
+            "hamlibIO.hamlibIOerror"
+        ),
+        (
+        TestHarness.exception,
+            ({"CREDIT_SUBMITTED" : "CQDX_QRP:LOTW&TEST"},),
+            "hamlibIO.hamlibIOerror"
+        ),
+        (
+        TestHarness.exception,
+            ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "hrdlog_qso_upload_status" : "Y"},),
+            "hamlibIO.hamlibIOerror"
+        ),
+        (
+        TestHarness.compare,
+            ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"},),
+            "<HRDLOG_QSO_UPLOAD_STATUS:1>N<call:5>K0RLO<EOR>\n"
+        ),
+        (
+        TestHarness.compare,
+            ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}, 2),
+            "<HRDLOG_QSO_UPLOAD_STATUS:1>N  <call:5>K0RLO  <EOR>\n"
+        ),
+        (
+        TestHarness.compare,
+            ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}, 1, True),
+            "<HRDLOG_QSO_UPLOAD_STATUS:1:E>N <call:5:S>K0RLO <EOR>\n"
+        ),
+    ),
 
-    (ADIF_record,
+    (
+    ADIF_header,
         (
-        (TestHarness.exception, ({"TEST" : "TEST"},), "hamlibIOerror"),
-        (TestHarness.exception, ({"HRDLOG_QSO_UPLOAD_STATUS" : "TEST"},), "hamlibIOerror"),
-        (TestHarness.exception, ({"CREDIT_SUBMITTED" : "CQDX_QRP:LOTW&TEST"},), "hamlibIOerror"),
-        (TestHarness.exception, ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "hrdlog_qso_upload_status" : "Y"},), "hamlibIOerror"),
-        (TestHarness.compare, ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"},), "<HRDLOG_QSO_UPLOAD_STATUS:1>N<call:5>K0RLO<EOR>\n"),
-        (TestHarness.compare, ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}, 2,), "<HRDLOG_QSO_UPLOAD_STATUS:1>N  <call:5>K0RLO  <EOR>\n"),
-        (TestHarness.compare, ({"HRDLOG_QSO_UPLOAD_STATUS" : "N", "call" : "K0RLO"}, 1, True),
-            "<HRDLOG_QSO_UPLOAD_STATUS:1:E>N <call:5:S>K0RLO <EOR>\n"),
-        )),
-
-    (ADIF_header,
+        TestHarness.exception,
+            ({"TEST" : "TEST"},),
+            "hamlibIO.hamlibIOerror"
+        ),
         (
-        (TestHarness.exception, ({"TEST" : "TEST"},), "hamlibIOerror"),
-        (TestHarness.exception, ({"CREATED_TIMESTAMP" : 7},), "hamlibIOerror"),
-        (TestHarness.compare, ({"PROGRAMID" : "pota_rapidlog", "CREATED_TIMESTAMP" : "19561030 120101", "ADIF_VER" : "0.0.0"}, None),
+        TestHarness.exception,
+            ({"CREATED_TIMESTAMP" : 7},),
+            "hamlibIO.hamlibIOerror"
+        ),
+        (
+        TestHarness.compare,
+            ({"PROGRAMID" : "pota_rapidlog", "CREATED_TIMESTAMP" : "19561030 120101", "ADIF_VER" : "0.0.0"}, None),
             """<ADIF_VER:5>0.0.0
 <CREATED_TIMESTAMP:15>19561030 120101
 <PROGRAMID:13>pota_rapidlog
 <EOH>
-"""),
-        (TestHarness.compare, ({"PROGRAMID" : "pota_rapidlog", "CREATED_TIMESTAMP" : "19561030 120101", "ADIF_VER" : "0.0.0"}, None, True),
+"""
+        ),
+        (
+        TestHarness.compare,
+            ({"PROGRAMID" : "pota_rapidlog", "CREATED_TIMESTAMP" : "19561030 120101", "ADIF_VER" : "0.0.0"}, None, True),
             """<ADIF_VER:5:S>0.0.0
 <CREATED_TIMESTAMP:15:S>19561030 120101
 <PROGRAMID:13:S>pota_rapidlog
 <EOH>
-"""),
-        )),
+"""
+        ),
+    ),
 
-    (freq_to_band,
-        (
-        (TestHarness.display, ("0.1",)),
-        (TestHarness.display, ("250001",)),
-        (TestHarness.compare, ("0.1357",), ("2190M",)),
-        (TestHarness.compare, ("241000",), ("1MM",)),
-        (TestHarness.compare, ("250000",), ("1MM",)),
-        )),
+    (
+    freq_to_band,
+        (TestHarness.display,
+            ("0.1",),
+            "Frequency outside valid band"
+        ),
+        (TestHarness.display,
+            ("250001",),
+            "Frequency outside valid band"
+        ),
+        (TestHarness.compare,
+            ("0.1357",),
+            ("2190M",)
+        ),
+        (TestHarness.compare,
+            ("241000",),
+            ("1MM",)
+        ),
+        (TestHarness.compare,
+            ("250000",),
+            ("1MM",)
+        ),
+    ),
 
-    (valid_band,
+    (
+    valid_band,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.display, ("14.0 14.2 14.3",)),
-        (TestHarness.display, ("13.7",)),
-        (TestHarness.compare, ("20m",), ["20m"]),
-        (TestHarness.compare, ("20m   40M",), ["20m", "40M"]),
-        (TestHarness.compare, ("2190M,  1mm",), ["2190M","1mm"]),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Invalid frequency"
+        ),
+        (
+        TestHarness.display,
+            ("14.0 14.2 14.3",),
+            "Too many values specified"
+        ),
+        (
+        TestHarness.display,
+            ("13.7",),
+            "Frequency not in valid band"
+        ),
+        (
+        TestHarness.compare,
+            ("20m",),
+            ["20m"]),
+        (
+        TestHarness.compare,
+            ("20m   40M",),
+            ["20m", "40M"]
+        ),
+        (
+        TestHarness.compare,
+            ("2190M,  1mm",),
+            ["2190M","1mm"]
+        ),
+    ),
 
-    (valid_frequency,
+    (
+    valid_frequency,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.display, ("7m",)),
-        (TestHarness.display, ("14 13",)),
-        (TestHarness.display, ("14.2.7",)),
-        (TestHarness.compare, ("14",), (['20M'], ['14'])),
-        (TestHarness.compare, ("14, 7",), (['20M', '40M'], ['14', '7'])),
-        )),
+        TestHarness.display,
+            ("TEST",),
+            "Invalid frequency"
+        ),
+        (
+        TestHarness.display,
+            ("7m",),
+            "Band specification, not frequencty"
+        ),
+        (
+        TestHarness.display,
+            ("14 13",),
+            "Blank in frequency"
+        ),
+        (
+        TestHarness.display,
+            ("14.2.7",),
+            "Too many decimal points"
+        ),
+        (
+        TestHarness.compare,
+            ("14",),
+            (['20M'], ['14'])
+        ),
+        (
+        TestHarness.compare,
+            ("14, 7",),
+            (['20M', '40M'],['14', '7'])
+        ),
+    ),
 
-    (valid_mode,
+    (
+    valid_mode,
         (
-        (TestHarness.display, ("TEST",)),
-        (TestHarness.display, ("TEST test TEST",)),
-        (TestHarness.display, ("OLIVIA TEST",)),
-        (TestHarness.display, ("SSB USB TEST",)),
-        (TestHarness.compare, ("SSB",), ('SSB',)),
-        (TestHarness.compare, ("SSB USB",), ('SSB', 'USB')),
-        (TestHarness.compare, ("USB",), ('SSB', 'USB')),
-        (TestHarness.compare, ("OLIVIA OLIVIA    32/1000",), ('OLIVIA', 'OLIVIA 32/1000')),
-        )),
-    )
+        TestHarness.display,
+            ("TEST",),
+            "Invalid mode"
+        ),
+        (
+        TestHarness.display,
+            ("TEST test TEST",),
+            "Invalid mode"
+        ),
+        (
+        TestHarness.display,
+            ("OLIVIA TEST",),
+            "Invalid submode"
+        ),
+        (
+        TestHarness.display,
+            ("SSB USB TEST",),
+            "Invalid submode"
+        ),
+        (
+        TestHarness.compare,
+            ("SSB",),
+            ('SSB',)
+        ),
+        (
+        TestHarness.compare,
+            ("SSB USB",),
+            ('SSB', 'USB')
+        ),
+        (
+        TestHarness.compare,
+            ("USB",),
+            ('SSB', 'USB')
+        ),
+        (
+        TestHarness.compare,
+            ("OLIVIA OLIVIA    32/1000",),
+            ('OLIVIA', 'OLIVIA 32/1000')
+        ),
+    ),
+)
 
 def run_tests():
     #
