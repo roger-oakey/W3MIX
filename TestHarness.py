@@ -10,6 +10,7 @@
 #### Import support modules
 ####
 
+import inspect
 import re
 import sys
 import traceback
@@ -264,13 +265,19 @@ Received data:
 
 validation_mapping = (compare, display, exception)
 
-def TestHarness(module_name, validation_tests):
-
-    if not isinstance(module_name, str):
-        raise TestHarnessError("module_name must be string")
+def TestHarness(validation_tests):
 
     if not isinstance(validation_tests, (tuple, list)):
         raise TestHarnessError("validation_tests must be tuple or list")
+
+    #
+    #Get the module name from that stack in order to get it from the
+    #horse's mouth.
+    #
+    try:
+        module_name = inspect.getmodule(inspect.stack()[1][0]).__name__
+    except:
+        module_name = "NONE"
 
     total = 0
     test_number = 0
@@ -514,52 +521,47 @@ validation_tests = (
     TestHarness,
         (
         exception,
-            (17, "TEST"),
+            ("TEST",),
             "TestHarness.TestHarnessError"
         ),
         (
         exception,
-            (__name__, "TEST"),
+            (("TEST",)),
             "TestHarness.TestHarnessError"
         ),
         (
         exception,
-            (__name__, ("TEST",)),
+            ((("TEST",),)),
             "TestHarness.TestHarnessError"
         ),
         (
         exception,
-            (__name__, (("TEST",),)),
+            (((test_test,(display,)),)),
             "TestHarness.TestHarnessError"
         ),
         (
         exception,
-            (__name__, ((test_test,(display,)),)),
+            (((test_test,(display,("2 * 4",))),)),
             "TestHarness.TestHarnessError"
         ),
         (
         exception,
-            (__name__, ((test_test,(display,("2 * 4",))),)),
+            (((test_test,(display,("2 * 4",),"TEST","TEST")),)),
             "TestHarness.TestHarnessError"
         ),
         (
         exception,
-            (__name__, ((test_test,(display,("2 * 4",),"TEST","TEST")),)),
+            (((test_test,(test_test,("2 * 4",),None)),),),
             "TestHarness.TestHarnessError"
         ),
         (
         exception,
-            (__name__, ((test_test,(test_test,("2 * 4",),None)),)),
-            "TestHarness.TestHarnessError"
-        ),
-        (
-        exception,
-            (__name__, ((test_test,(display,"TEST",None)),)),
+            (((test_test,(display,"TEST",None)),),),
             "TestHarness.TestHarnessError"
         ),
         (
         compare,
-            (__name__, ((test_test,(compare,("2 * 4",),8)),)),
+            (((test_test,(compare,("2 * 4",),8)),),),
             0
         ),
     ),
@@ -588,4 +590,4 @@ def run_tests():
     #
     #Run all validation tests
     #
-    TestHarness(__name__, validation_tests)
+    TestHarness(validation_tests)

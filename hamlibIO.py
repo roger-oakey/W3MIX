@@ -7557,5 +7557,5 @@ def run_tests():
     #
     #Run all validation tests
     #
-    TestHarness.TestHarness(__name__, validation_tests)
+    TestHarness.TestHarness(validation_tests)
 
