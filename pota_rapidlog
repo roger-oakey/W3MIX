@@ -648,7 +648,7 @@ POTA log already exists for this callsign and park:
 Last modified on {} (Local). Do you wish to archive this as:
     "{}"
 and start a new log""".format(filename,
-            time.strftime("%Y/%m/%d %H:%M:%S", mtime))
+            time.strftime("%Y/%m/%d %H:%M:%S", mtime), new_filename)
 
         #
         #New log file to start, rename the old file
@@ -836,7 +836,7 @@ At this prompt you can do the following:
         continue
 
     #
-    #See ifnew frequency (-ies) have been specified
+    #See if new frequency (-ies) have been specified
     #
     test = hamlibIO.valid_frequency(hunter_info)
     if type(test) != str:
@@ -935,7 +935,7 @@ Error: More than two double quotes '"' detected. A comment must have two double
         print(report_error)
 
     #
-    #Initialize bad_info based upon the validation of the callsign
+    #Initialize bad_entry based upon the validation of the callsign
     #
     bad_entry = bool(report_error)
 

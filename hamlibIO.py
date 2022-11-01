@@ -6198,21 +6198,19 @@ Error: "{}" is an invalid mode or submode.
 """.format(mode_text))
 
 #
-#Validation tests are created in the order of the functions in hamlibIO.
-#[0] of the key tuple is the number that forces sort order of the tests
-#as well as giving each routine a unique major test sequence number.
+#Validation tests are created in [hopefully] the order of the functions
+#in hamlibIO. Each tuple contains the function to test, followed by any
+#number of 3 element tuples consisting of the type of test, a tuple of
+#arguments to the function and data.
 #
-#   Note: It's best to leave room, such as numbering by 10s to allow
-#         functions to be inserted in the validation test list in the
-#         order they appear in the module.
-#
-#[1] of the key tuple is the name of the function in hamlibIO to
-#test. This will be "eval'd" to call the function.
-#
-#The value of the dictonary entry is a tuple of tuples. First argument
-#is the test routine to use, the second the argument(s) to pass to the
-#function under test and the third, if present, is the return value
-#expected, if any.
+#Data depends on the test:
+#   If it's an exception test, the data is the start of the text of the
+#       exception expected.
+#   If it's a compare, data is EXACTLY the data that should be returned
+#       from the function called with the supplied argumens.
+#   In the case of a display, it's an optional note as to what the
+#       person looking over the test log should see returned from the
+#       function.
 #
 
 validation_tests = (
@@ -7557,5 +7555,6 @@ def run_tests():
     #
     #Run all validation tests
     #
-    TestHarness.TestHarness(validation_tests)
+    if TestHarness.TestHarness(validation_tests):
+        print("Errors detected")
 
