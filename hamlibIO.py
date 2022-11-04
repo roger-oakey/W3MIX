@@ -5941,10 +5941,14 @@ def freq_to_band(freq):
     ))
 
     #
-    #Convert string frequency to float (valid float format already
-    #verified)
+    #Convert string frequency to float, report error if invalid format
     #
-    float_freq = float(freq)
+    try:
+        float_freq = float(freq)
+    except:
+        return("""
+    "{}" is not a valid frequency format
+""".format(freq))
 
     #
     #Go through bands and check to see if frequency in range
@@ -6058,28 +6062,17 @@ def valid_frequency(freq):
 
     for index in range(len(freq)):
         #
-        #Check frequency for a valid format
-        #
-        if not re.fullmatch(re_frequency, freq[index]):
-            #
-            #Not a correctly formatted frequency, return False
-            #
-            return("""
-    "{}" is not a valid frequency format.
-""".format(freq[index]))
-
-        #
         #Determine band
         #
         band = freq_to_band(freq[index])
-        if type(band) == str:
+        if isinstance(band, str):
             #
             #Frequency not valid, return error text supplied.
             #
             return(band)
 
         #
-        #Save lists of band (which came back asa  tuple with one entry) and
+        #Save lists of band (which came back as a tuple with one entry) and
         #frequency
         #
         bands.append(band[0])
@@ -7417,6 +7410,14 @@ validation_tests = (
 
     (
     freq_to_band,
+        (TestHarness.display,
+            ("0.1.7",),
+            "Invalid frequency format"
+        ),
+        (TestHarness.display,
+            ("7a",),
+            "Invalid frequency format"
+        ),
         (TestHarness.display,
             ("0.1",),
             "Frequency outside valid band"

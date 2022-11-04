@@ -6,7 +6,7 @@ pota_rapidlog
 
 About pota_rapidlog:
 
-    pota_rapidlog is a simple program that creates an ADIF file for POTA
+    pota_rapidlog is a simple program that creates an ADI file for POTA
     reporting. By avoiding a GUI (Graphical User Interface), pota_rapidlog
     allows fast, simple QWERTY data entry without having to click and select
     fields to create a log entry. This allows the user to stay "heads down" on
@@ -73,9 +73,12 @@ NOTE: At this point pota_rapidlog can figure out the log file name. It will
       check to see if a log file of that name already exists. If it does, the
       following question will be asked:
 
-        POTA log already exists for this callsign and park: K0RLO_K-1111.adif
-        Last modified on 2022/09/02 15:26:01 (Local time)
-        Do you wish to archive it and start a new log [(N), y]:
+        POTA log already exists for this callsign and park:
+            "K0RLO_K-1111.adi"
+        Last modified on 2022/11/04 08:59:24 (Local).
+        Do you wish to archive this as:
+            "K0RLO_K-1111.adi_20221104-085924"
+        and start a new log [(N), y]:
 
       Press <Enter> (default of "NO") if you wish to ADD to the existing log.
       Type "N"<Enter> if you wish the existing log to be renamed (it won't be
@@ -85,8 +88,10 @@ NOTE: At this point pota_rapidlog can figure out the log file name. It will
     Band or frequency:
 
         The initial band or frequency being to be used. If you supply a
-        frequency, the band will automatically be calculated. If you're running
-        split operations, enter the transmit followed by the receive frequency.
+        frequency, the band will automatically be calculated. If you're
+        running split operations, enter the transmit followed by the receive
+        frequency.
+
         If you enter a band, no frequency will be logged.
         Examples: "20M", "14.200" or if split operations, "14.200 14.300"
 
@@ -99,15 +104,29 @@ NOTE: At this point pota_rapidlog can figure out the log file name. It will
         automatically determined.
         Examples: "CW", "SSB", "SSB USB" or "USB"
 
+    Manual date and time:
+
+        If you are entering contacts from a written logbook after your
+        activation, enter the UCT date of contact in the format of
+        YYYYMMDD. You will then be required to enter each QSO time
+        (HH:MM or HH:MM:SS).
+
+        If you are logging as you make contacts, just press <ENTER> and the
+        current date and time will be automatically generated for each
+        contact.
+
+After the above questions you will enter logging mode. The prompt will
+appear as follows:
+
     (20M:USB:NOPWR) Hunter contact information:
 
         Entering a hunter contact:
 
-            This is where you would start logging hunter contacts. Note that in
-            this example we're using the "20M" band, our submode is "USB" and
-            we have not specified a transmit power. At bare minimum all we need
-            to do at this point to log a contact is to type in a hunter's
-            callsign.
+            This is where you would start logging hunter contacts. Note that
+            in this example we're using the "20M" band, our submode is "USB"
+            and we have yet not specified an optional transmit power. At bare
+            minimum all we need to do at this point to log a contact is to
+            type in a hunter's callsign.
             Example: "w1ju"
 
             But you can do more.
@@ -118,8 +137,8 @@ NOTE: At this point pota_rapidlog can figure out the log file name. It will
             Examples: "w1ju 59" or "w1ju 59 59"
 
             For park-to-park contacts, enter the park the other activator is
-            calling from. If they're simultaneously activating parks, just
-            enter ALL the parks they're activating from.
+            calling from. If they're simultaneously activating multiple parks,
+            just enter ALL the parks they're activating from.
             Examples: "w1ju k-1111" or "w1ju k-1111 k-2222 k-3333"
 
             If your hunter is running 5 watts QRP, maybe you'd like to record
@@ -131,9 +150,9 @@ NOTE: At this point pota_rapidlog can figure out the log file name. It will
             Examples: 'w1ju "My bud Harvey"'
 
             Most importantly, after the hunter's callsign (which MUST be
-            entered first) ALL the above optional information may be entered in
-            ANY ORDER! pota_rapidlog supports freeform entry and will correctly
-            log all the information you give it.
+            entered first) ALL the above optional information may be entered
+            in ANY ORDER! pota_rapidlog supports freeform entry and will
+            correctly log all the information you give it.
 
             So the following hunter entries are ALL identical and would
             generate identical log entries:
@@ -142,6 +161,19 @@ NOTE: At this point pota_rapidlog can figure out the log file name. It will
                 w1ju k-1111 k-2222 59 58 5w "My bud Harvey"
                 w1ju 5w "My bud Harvey" k-1111 k-2222 59 58
                 w1ju 5w "My bud Harvey" 59 k-1111 58 k-2222
+
+            Note: If you wish to change the frequency or band temporarily
+            for a single contact (such as you went to another frequency
+            for a park-to-park contact) you can enter the band or frequency
+            as part of the contact, for example:
+
+                w1ju 14.320
+                w1ju 59 58 14.300
+                w1ju 47 48 17m
+
+            Split operations can be entered as two bands or frequencies
+            (transmit, then receive). Like other entries the temporary band
+            or frequency can be entered anywhere after the callsign.
 
 NOTE: If you entered more than one operator to the "Operator callsign(s)"
       question, you will see the following question asked for each operator
@@ -199,9 +231,9 @@ Exiting pota_rapidlog:
     prompt. pota_rapidlog never leaves the log file open while running, so
     there is no danger of losing your log data.
 
-pota_rapidlog ADIF file:
+pota_rapidlog ADI file:
 
-    The ADIF file that pota_rapidlog generates adheres to the following POTA
+    The ADI file that pota_rapidlog generates adheres to the following POTA
     documentation:
 
 https://docs.pota.app/docs/activator_reference/ADIF_for_POTA_reference.html
@@ -240,7 +272,7 @@ Installing pota_rapidlog:
             cd ~
             ./K0RLO/pota_rapidlog
 
-        ...and pota_rapidlog will start running and your ADIF (.adif) log files
+        ...and pota_rapidlog will start running and your ADI (.adi) log files
         will found in your home directory.
 
         From time to time to assure that you have the latest and greatest

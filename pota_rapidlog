@@ -12,7 +12,7 @@
 #### Global definitions
 ####
 
-pota_rapidlog_version = "00.2022.10.09"
+pota_rapidlog_version = "00.2022.11.04"
 
 ####
 #### Import support modules
@@ -340,7 +340,7 @@ def valid_power(power):
        Example: "100W" or "5W".
 """.format(power))
 
-def validate_park(park):
+def valid_park(park):
     """
     See if valid power specified. If so, return it. If not, return False
 
@@ -483,7 +483,7 @@ Park code(s): """).upper()
     pks = {}
     errors = ""
     for park in re.split(hamlibIO.default_split, parks):
-        errors += validate_park(park)
+        errors += valid_park(park)
         if errors:
             bad_park = True
             continue
@@ -645,7 +645,8 @@ for operator in callsigns:
         prompt = """
 POTA log already exists for this callsign and park:
     "{}"
-Last modified on {} (Local). Do you wish to archive this as:
+Last modified on {} (Local).
+Do you wish to archive this as:
     "{}"
 and start a new log""".format(filename,
             time.strftime("%Y/%m/%d %H:%M:%S", mtime), new_filename)
@@ -688,14 +689,14 @@ Band or frequency: """).upper()
     #Validate band or frequency
     #
     test = hamlibIO.valid_band(freq)
-    if type(test) != str:
+    if not isinstance(test, str):
         bands = test
-        frequencies = []
+        freqs = []
         break
 
     test = hamlibIO.valid_frequency(freq)
-    if type(test) != str:
-        (bands, frequencies) = test
+    if not isinstance(test, str):
+        (bands, freqs) = test
         break
 
     #
@@ -730,7 +731,7 @@ Operating mode: """).upper()
     #Validate mode
     #
     test = hamlibIO.valid_mode(mode)
-    if type(test) != str:
+    if not isinstance(test, str):
         mode_submode = test
         break
 
@@ -738,6 +739,42 @@ Operating mode: """).upper()
     #Report error and ask again
     #
     print(test)
+
+####
+#### See if manual time entry by asking for date
+####
+
+help = """
+For manual time enty, enter the date in the format YYYYMMDD. This will
+REQUIRE a time to be entered for every log entry. For automatic
+timestamping of log entries, just press <Enter>.
+
+    Example: 20221103
+"""
+
+while(True):
+    manual_date = hamlibIO.get_input(help, """
+Enter date (YYYYMMDD) for manual time entry,
+    Press <Enter> for automatic time entry: """,
+        default="").upper()
+
+    #
+    #If nothing typed, leave manual_dt as ""
+    #
+    if not manual_date:
+        break
+
+    #
+    #Validate mode
+    #
+    test = hamlibIO.Date(manual_date)
+    if not test:
+        break
+
+    #
+    #Report error and ask again
+    #
+    print("Error: Date error" + test)
 
 #
 #Put a space before the first log entry
@@ -763,6 +800,67 @@ power = ["0","0"]
 #### by just typing a band, mode, frequency or power alone on a line.
 ####
 
+
+log_help = """
+At this prompt you can do the following:
+    Specify a new mode and optionally a submode.
+        Examples:
+            SSB
+            USB
+            SSB LSB
+
+    Specify a new band or transmit AND receive band. If you specify a
+    band, no frequency will be recorded.
+        Examples:
+            20M
+            20M 40M
+
+    Specify a new frequency or transmit AND receive frequency. If you
+    specify the frequency, the band will be automatically be determined
+    and recorded in the log.
+        Examples:
+            14.215
+            14.215 14.250
+
+    Specify a new transmit power. Enter "0W" to stop recording a
+    transmit power.
+        Examples:
+            10W
+            1500W
+
+    Enter a QSO:
+        Enter the hunter's callsign, followed by optional information in
+        any order like sent and received RSTs, hunter transmit power,
+        park to park identifier(s) and a comment enclosed in double
+        quotes. Additionally, you can temporarily change the frequency
+        or band for this one QSO (for example, you jumped to another
+        frequency to do a park-to-park). Split frequencies or bands
+        can be specified as well, transmit band or frequency first.
+            Examples:
+                Absolute minimum, just the callsign:
+                    W1JU
+                All optional information:
+                    W1JU 59 57 10W "It's Harvey!"
+                Twofer park-to-park and all optional information:
+                    W1JU "Twofer from Harvey" K-1111 K-2222 10W 59 57
+
+                Changing frequency or band for one QSO:
+                    W1JU 59 57 K-1111 14.250
+                    W1JU 59 57 K-1111 17M
+
+        All optional information may be entered in ANY order except when
+        specified (sent and received RST order and transmit
+        frequency/band and receive frequency/band order).
+"""
+
+
+op_help = """
+Enter "Y" (or just press <Enter>) if the specified operator has performed an
+    exchange with the hunter and they wish to receive credit for the contact.
+Enter "N" if the specified operator is unable to perform an exchange with
+    the hunter or they should not receive credit for the contact.
+"""
+
 while (True):
     #
     #See if power is being reported
@@ -778,46 +876,9 @@ while (True):
     display_mode = mode_submode[len(mode_submode) - 1]
 
     #
-    #Do not report hunter power unless specified in log entry
-    #
-    power[1] = "0"
-
-    #
     #Get hunter information
     #
-    help = """
-At this prompt you can do the following:
-    Specify a new mode and optionally a submode, such as "CW", "SSB",
-    "SSB USB" or "LSB".
-
-    Specify a new band or transmit AND receive band, such as "20M" or
-    "20M 40M". If you specify just a band, no frequency will not be
-    recorded.
-
-    Specify a new frequency or transmit AND receive frequency, such as
-    "14.215" or "14.215 14.275" If you specify the frequency, the band
-    will be automatically be determined and recorded in the log.
-
-    Specify a new transmit power, such as "100W". Enter "0W" to stop
-    recording a transmit power.
-
-    Enter a hunter contact:
-        Enter the hunter's callsign, followed by optional information in
-        any order like sent and received RSTs, hunter transmit power,
-        park to park identifier(s) and a comment enclosed in double
-        quotes.
-
-        Examples:
-            Absolute minimum, just the callsign:
-                W1JU
-            All optional information:
-                W1JU 59 57 10W "Harvey!"
-            Twofer park-to-park and all optional information:
-                W1JU "Twofer from Harvey" K-1111 K-2222 10W 59 57
-
-        All optional information may be entered in ANY order.
-"""
-    original_hunter_info = hamlibIO.get_input(help, 
+    original_hunter_info = hamlibIO.get_input(log_help, 
         "({}:{}:{}) Hunter contact information: ".format(bands[0],
             display_mode, display_power))
 
@@ -827,30 +888,30 @@ At this prompt you can do the following:
     #See if new band(s) have been specified
     #
     test = hamlibIO.valid_band(hunter_info)
-    if type(test) != str:
+    if not isinstance(test, str):
         #
-        #Save both band and no frequencies
+        #Save both band and don't report frequencies
         #
         bands = test
-        frequencies = []
+        freqs = []
         continue
 
     #
     #See if new frequency (-ies) have been specified
     #
     test = hamlibIO.valid_frequency(hunter_info)
-    if type(test) != str:
+    if not isinstance(test, str):
         #
         #Save both band(s) and frequencies
         #
-        (bands, frequencies) = test
+        (bands, freqs) = test
         continue
 
     #
     #See if a new mode has been specified
     #
     test = hamlibIO.valid_mode(hunter_info)
-    if type(test) != str:
+    if not isinstance(test, str):
         mode_submode = test
         continue
 
@@ -858,7 +919,7 @@ At this prompt you can do the following:
     #See if a new power has been specified
     #
     test = valid_power(hunter_info)
-    if type(test) != str:
+    if not isinstance(test, str):
         #
         #Save new power. Setting power to "0" will cause no power to be
         #reported.
@@ -942,10 +1003,13 @@ Error: More than two double quotes '"' detected. A comment must have two double
     #
     #Split the remainder of the info into RST reports and parks, if any
     #
-    hunter_parks = {}
-    hunter_power = {}
+    manual_time = ""
+    hunter_parks = []
+    hunter_power = []
     rst = []
     bad_strings = []
+    override_freq = []
+    override_band = []
 
     #
     #Look through the free-float format and save optional park, RST and power,
@@ -955,11 +1019,17 @@ Error: More than two double quotes '"' detected. A comment must have two double
         #
         #If it's a park, save it as a park
         #
-        if not validate_park(component):
+        if not valid_park(component):
             #
-            #Eliminate duplicate parks by using dictonary
+            #See if thisw park already specified
             #
-            hunter_parks[component] = True
+            if component in hunter_parks:
+                print("""
+Error: Park "{}" specified more than once. Park number typo?
+""".format(component))
+                bad_entry = True
+            else:
+                hunter_parks.append(component)
             continue
         #
         #If it's an RST, save it as an RST
@@ -973,17 +1043,65 @@ Error: More than two double quotes '"' detected. A comment must have two double
         #
         #If it's a power, save it as a power
         #
-        if re.fullmatch(r'\d{1,4}W', component):
+        test = valid_power(component)
+        if not isinstance(test, str):
             #
-            #It's an hunter power, save it as an power removing the "W"
+            #It's an hunter power, returned as the first element of a
+            #tuple, save the power as returned (no "W" at end)
             #
-            hunter_power[component] = True
+            hunter_power.append(test[0])
+            continue
+
+        #
+        #See if this is a valid time
+        #
+        if not hamlibIO.Time(component):
+                #
+                #Valid manual time, save it
+                #
+                manual_time = component
+                continue
+
+        #
+        #See if we're temporarily overriding the frequency
+        #
+        if not isinstance(hamlibIO.valid_frequency(component), str):
+            override_freq.append(component)
+            continue
+
+        #
+        #See if we're temporarily overriding the band
+        #
+        if not isinstance(hamlibIO.valid_band(component), str):
+            override_band.append(component)
             continue
 
         #
         #Unrecognized string, save error
         #
-        bad_strings.append(component)
+        print("""
+Error: "{}" is not a recognized entry. Press <Enter> to get help on how to
+       enter information on the hunter contact information line.
+""".format(component))
+        bad_entry = True
+
+    #
+    #See if we have a manual date without a manual time, or a manual
+    #time without a manual date
+    #
+    if manual_date:
+        if not manual_time:
+            print("""
+Error: Manual date specified but no manual time. Program was started with
+       a manual date, which means all log entries must have a manual time
+       specified.
+""")
+            bad_entry = True
+    elif manual_time:
+        print("""
+Error: Manual time specified but no manual date. Restart program and enter
+       a manual date if you wish to specify time.
+""")
         bad_entry = True
 
     #
@@ -996,11 +1114,14 @@ Error: More than one power entry. The hunter can only have one power entered.
 """)
             bad_entry = True
         #
-        #Save receive power - only one entry in the dictonary, get its key
-        #and strip the "W" off the end.
+        #Save hunter (receive) power.
         #
-        power[1] = list(hunter_power)[0][:-1]
-
+        power[1] = hunter_power[0]
+    else:
+        #
+        #Do not report any hunter power
+        #
+        power[1] = "0"
 
     #
     #Verify we have no more than 2 RST entries
@@ -1017,17 +1138,36 @@ Error: More than two RST entries. The RST report you send to the hunter is the
         bad_entry = True
 
     #
-    #Report any strings we didn't recognize
+    #Assure we're not overriding BOTH the frequency and band
     #
-    for errors in bad_strings:
-        #
-        #Report error
-        #
+    if override_freq and override_band:
         print("""
-Error: "{}" is not a recognized entry. Press <Enter> to get help on how to
-       enter information on the hunter contact information line.
-""".format(errors))
+Error: Cannot override BOTH frequency and band. Specify one or the other.
+""")
         bad_entry = True
+
+    #
+    #Make sure we didn't specify more than two override frequencies
+    #(support split operation)
+    #
+    if len(override_freq) > 2:
+        print("""
+Error: More than two override frequencies specified. Specify one
+       frequency for simplex operation, two for splitband.
+""")
+        bad_entry = True
+
+    #
+    #Make sure we didn't specify more than two override bands (support
+    #split operation)
+    #
+    if len(override_band) > 2:
+        print("""
+Error: More than two override bands specified. Specify one band for
+       simplex operation, two for splitband.
+""")
+        bad_entry = True
+
     #
     #If we got any bad information, skip processing and ask for
     #hunter callsign, RST and park(s) again.
@@ -1036,24 +1176,30 @@ Error: "{}" is not a recognized entry. Press <Enter> to get help on how to
         continue
 
     ####
-    #### Start assembling the QSO to be logged, start with the stuff
-    #### common to all the record(s) to be written. Start with a ADIF
-    #### record only containing MY_SIG = POTA
+    #### Input error checking complete.
     ####
+    #### Assembe the QSO to be logged, start with the stuff common to
+    #### all the record(s) to be written. Initialize the ADIF record to
+    #### only contain MY_SIG = POTA
+    ####
+
+    #
+    #If overriding frequency or band, format into lists
+    #
+    if override_freq:
+        (override_band, override_freq) = \
+            hamlibIO.valid_frequency(" ".join(override_freq))
+    elif override_band:
+        override_band = hamlibIO.valid_band(" ".join(override_band))
+
     QSO_record = {"MY_SIG":"POTA"}
 
     #
     #Save the date, time and hunter callsign
     #
-    QSO_record["QSO_DATE"] = time.strftime("%Y%m%d", utc)
-    QSO_record["TIME_ON"] = time.strftime("%H%M%S", utc)
+    QSO_record["QSO_DATE"] = manual_date if manual_date else time.strftime("%Y%m%d", utc)
+    QSO_record["TIME_ON"] = manual_time if manual_time else time.strftime("%H%M%S", utc)
     QSO_record["CALL"] = hunter_callsign
-
-    #
-    #Save transmit, and optionally receive band in record
-    #
-    for index, band in enumerate(bands):
-        QSO_record[band_tags[index]] = band
 
     #
     #Save mode and submode
@@ -1062,16 +1208,32 @@ Error: "{}" is not a recognized entry. Press <Enter> to get help on how to
         QSO_record[mode_tags[index]] = mode
 
     #
-    #Save transmit, and optionally receive frequencies in record
+    #Save transmit, and optionally receive band in record. Use
+    #override_band if band temporarily overriden for this log entry.
     #
-    for index, freq in enumerate(frequencies):
+    for index, band in \
+        enumerate(override_band if override_band else bands):
+        QSO_record[band_tags[index]] = band
+
+    #
+    #Save transmit, and optionally receive frequencies in record.  Use
+    #override_freq if frequency temporarily overriden for this log entry.
+    #
+    #Tricky code here. Note the test for override_band. If JUST the band
+    #was overiddden, override_freq is an empty list so we won't store
+    #frequencies, which is correct. If we overrided frequencies, we have
+    #BOTH bands and frequencies, so in that case we'll use the non-empty
+    #override_freq list.
+    #
+    for index, freq in \
+        enumerate(override_freq if override_band else freqs):
         QSO_record[frequency_tags[index]] = freq
 
     #
     #Save optional transmit and receive power in record
     #
     for index, pwr in enumerate(power):
-        if power[index] != "0":
+        if pwr != "0":
             #
             #If there is a power specified, report it
             #
@@ -1099,19 +1261,13 @@ Error: "{}" is not a recognized entry. Press <Enter> to get help on how to
     #Log contacts for all operators (any input will skip an
     #operator from having a log entry)
     #
-    help = """
-Enter "Y" (or just press <Enter>) if the specified operator has performed an
-    exchange with the hunter and they wish to receive credit for the contact.
-Enter "N" if the specified operator is unable to perform an exchange with
-    the hunter or they should not receive credit for the contact.
-"""
     for operator in operators:
         #
         #This loop will log entries for ALL the operators that are "sharing a
         #microphone".
         #
         if ((len(operators) > 1) and
-            not hamlibIO.get_yes_no(help, "Log contact for " + operator)):
+            not hamlibIO.get_yes_no(op_help, "Log contact for " + operator)):
             #
             #If "N" typed, skip this operator
             #
@@ -1154,11 +1310,11 @@ Enter "N" if the specified operator is unable to perform an exchange with
                 #error is detected in the header, which will casue an
                 #exception and abort.
                 #
-                header = {
-                    "PROGRAMVERSION":pota_rapidlog_version
-                    }
-
-                header = hamlibIO.ADIF_header(header)
+                #Only need to specify the program version, ADIF_header
+                #will fill in all the other required header fields.
+                #
+                header = hamlibIO.ADIF_header(\
+                    {"PROGRAMVERSION":pota_rapidlog_version})
 
                 f = open(log_filename, "w")
                 f.write(header)
@@ -1185,6 +1341,10 @@ Enter "N" if the specified operator is unable to perform an exchange with
                     #information
                     #
                     QSO_record["SIG_INFO"] = hunter_park
+
+                    #
+                    #Create multiple QSOs, one for each park.
+                    #
                     QSO += hamlibIO.ADIF_record(QSO_record)
             else:
                 #
@@ -1194,8 +1354,8 @@ Enter "N" if the specified operator is unable to perform an exchange with
                 QSO = hamlibIO.ADIF_record(QSO_record)
 
             #
-            #Open, write and close the ADIF file to avoid corruption if
-            #interrupted.
+            #Open, write and close the ADIF file to minimize the
+            #possibility of corruption if interrupted.
             #
             f = open(log_filename, "a")
             f.write(QSO)
