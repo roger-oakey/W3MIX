@@ -1,0 +1,223 @@
+#!/usr/bin/python3
+
+"""
+Go here to find question pools: http://www.ncvec.org/
+
+Download word and text document of pool.
+
+Move text document to Ubuntu.
+
+install isutf8: sudo apt install moreutils
+
+Run isutf8 against text document, removing all invalid characters. Use word document to determine what characters should be, if necessary.
+
+Using errata in word document, apply changes to text document.
+"""
+
+###############################################################################
+###############################################################################
+####
+#### Ham test testing program. Read all questions for a specific license and
+#### ask them all, scrambing the answer order, skipping really easy questions.
+####
+###############################################################################
+###############################################################################
+
+####
+#### Global definitions
+####
+
+take_test_version = "00.2023.01.22"
+
+test_files = {
+    "E" : "test_extra",
+    "G" : "test_general",
+    "T" : "test_technician"
+    }
+skip_file = "skip_questions"
+
+import os
+import random
+import re
+import sys
+
+#
+#Put parent directory in the system path in order to import hamlibIO.py
+#from the directory above
+#
+this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+sys.path.append(os.path.dirname(this_dir))
+
+import hamlibIO
+
+#
+#Read in the questions to skip and convert to a dictonary of skipped questions
+#
+try:
+    f = open(skip_file, "r")
+    ques = f.read()
+    f.close()
+except:
+    ques = ""
+
+questions_to_skip = {}
+bad_format = []
+for skip_ques in re.split(r'[,; \n]+', ques):
+    #
+    #Skip null entries
+    #
+    if not skip_ques:
+        continue
+
+    #
+    #Validate question format, add to bad format list if not in
+    #correct format.
+    #
+    if not re.fullmatch(r'[EGT]\d[A-Z]\d{2}', skip_ques):
+        bad_format.append(skip_ques)
+        continue
+
+    #
+    #Add the question to skip to the list
+    #
+    questions_to_skip[skip_ques] = 1
+
+if bad_format:
+    print("""\
+Error: In the "{}" file, the following question
+       numbers to skip have a bad format:
+       {}""".format(skip_file, ", ".join(bad_format)))
+    exit(1)
+
+#
+#Ask which test to take
+#
+test_ques = """
+Enter level of test you wish to take, [T]echnician, [G]eneral or
+[E]xtra. Only the first letter need be specified.
+"""
+while(True):
+    test = hamlibIO.get_input(test_ques, """
+Enter test level: [T]echnician, [G]eneral or [E]xtra: """)[:1].upper()
+
+    #
+    #If not a valid answer, ask again
+    #
+    if test in test_files:
+        break
+
+try:
+    f = open(os.path.join(this_dir, test_files[test]), "r")
+    test_text = f.read()
+    f.close()
+except:
+    print("""
+Error: Unable to open test file "{}" """.format(test_files[test]))
+    exit(1)
+
+#
+#Blank line before test starts printing
+#
+print()
+
+#
+#Compile regular expression to parse questions
+#
+match_string_hold = r'(.*?)(' + test + r'\d[A-Z]\d{2}).*?\((.*?)\)(.*?)$(.*?)~~'
+match_string_hold2 = r'(.*?)(' + test + r'\d[A-Z]\d{2})\s*\(([A-D])\)\s*(.*?)$(.*?)^\s*A\.\s*(.+?)$^\s*B\.\s*(.+?)$^\s*C\.\s*(.+?)$^\s*D\.\s*(.+?)$(.*?)~~'
+match_string = r'(.*?)(' + test + r'\d[A-Z]\d{2})\s*\(([A-D])\)(.*?)$(.*?)^\s*A\.\s*(.+?)^\s*B\.\s*(.+?)$\s*C\.\s*(.+?)^\s*D\.\s*(.+?)^.*?~~'
+finder = re.compile(match_string, re.DOTALL | re.MULTILINE)
+
+#
+#Format string to reformat questions with answer after them
+#
+format_question = """{}
+{}
+"""
+format_answers = """{}. {}"""
+format_correct_answer = """
+          {}: {} {}
+"""
+
+#
+#Count the number of questions and questions printed
+#
+count = 0
+printed = 0
+
+#
+#Find initial match
+#
+result = finder.match(test_text)
+while result:
+
+    count+= 1
+
+    #
+    #Move fields parsed by RE into variables with sane names
+    #
+    question_number = result.group(2).strip().upper()
+    original_correct_answer = ord(result.group(3).strip().upper()) - ord("A")
+    regulations = result.group(4).strip()
+    question = re.sub(r'\n', " ", result.group(5).strip())
+
+    #
+    #Build list of answers
+    #
+    answers = []
+    for index in range(6, 10):
+        answers.append(re.sub(r'\n', " ", result.group(index).strip()))
+
+    #
+    #Randomize the answer order
+    #
+    reorder = [index for index in range(4)]
+    random.shuffle(reorder)
+
+    if question_number not in questions_to_skip:
+        #
+        #Print the question number and the question
+        #
+        printed += 1
+        print(format_question.format(question_number,
+                                     question))
+        #
+        #Print the four answers reordered randomly and save new right
+        #answer.
+        #
+        for index in range(4):
+            #
+            #Save the new correct answer (index where the correct
+            #answer moved to).
+            #
+            if original_correct_answer == reorder[index]:
+                new_correct_answer = index
+
+            #
+            #Print the answers in a random order determined by the
+            #reorder list.
+            #
+            print(format_answers.format(chr(ord("A") + index),
+                answers[reorder[index]]))
+
+        #
+        #Print the correct answer and any regulations it qoutes
+        #
+        print(format_correct_answer.format(
+            question_number,
+            chr(ord("A") + new_correct_answer),
+            regulations))
+
+    #
+    #Remove everything up to and including the question just formatted
+    #
+    test_text = finder.sub("", test_text, count = 1)
+
+    #
+    #Find next question, return False (and exit loop) if no question found
+    #
+    result = finder.match(test_text)
+
+print("A total of {} questions, {} skipped".format(count, count - printed))
+
+exit(0)
