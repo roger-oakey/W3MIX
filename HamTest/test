@@ -117,9 +117,6 @@ except:
 Error: Unable to open test file "{}" """.format(test_files[test]))
     exit(1)
 
-
-
-
 #
 #Ask which test to take
 #
@@ -208,22 +205,29 @@ while result:
 
     #
     #Count total questions and element and subelement questions.
+    #
     count+= 1
     element_questions[int(question_number[1:2])] += 1
     subelement_questions[int(question_number[1:2])][question_number[2:3]] += 1
 
     #
-    #We've captured all fields from this question, parse next
-    #question before we decide to print the answer or prompt the
-    #user for the answer. This will setup the information required for
-    #the bottom of the loop evaluation...
+    #We've captured all the parsed fields from this question. Parse the
+    #next question before we move forward so each decision we make
+    #below can simply end with a "continue" statement because we have
+    #the next question parsed and ready to go.
     #
     test_text = finder.sub("", test_text, count = 1) #Strip this question off
     result = finder.match(test_text)                 #Read next question
 
+    ####################################################################
+    ####
+    #### Skip this question if in skip list
+    ####
+    ####################################################################
+
     if question_number in questions_to_skip:
         #
-        #Skip this question and go onto the one already read in...
+        #Skip this question.
         #
         continue
 
@@ -249,11 +253,11 @@ while result:
     #
     for index in range(4):
         #
-        #Save the new correct answer (index where the correct
-        #answer moved to).
+        #Save the new correct answer (character of correct answer).
         #
         if original_correct_answer == reorder[index]:
-            new_correct_answer = index
+            new_correct_answer = chr(ord("A") + index)
+            new_correct_answer_text = answers[reorder[index]]
 
         #
         #Print the answers in a random order determined by the
@@ -262,9 +266,12 @@ while result:
         print(format_answers.format(chr(ord("A") + index),
             answers[reorder[index]]))
 
-    #
-    #If the test is just to be printed, print the answer
-    #
+    ####################################################################
+    ####
+    #### If test just to be printed, print the answser
+    ####
+    ####################################################################
+
     if print_test:
         #
         #Print the correct answer and any regulations it has associated
@@ -272,16 +279,19 @@ while result:
         #
         print(format_correct_answer.format(
             question_number,
-            chr(ord("A") + new_correct_answer),
+            new_correct_answer,
             regulations))
         #
         #Print next question
         #
         continue
 
-    #
-    #We're administing the test; ask for the answewr or skip
-    #
+    ####################################################################
+    ####
+    #### We're administring the test, ask for an answer or skip
+    ####
+    ####################################################################
+
     answer_help = """
 Enter the answer "A", "B", "C" or "D" or enter [S]kip if you wish to
 have this question added to the skip list (because it's easy and you
@@ -289,7 +299,7 @@ don't need to be asked it anymore).
 """
     while(True):
         answer = hamlibIO.get_input(answer_help, """
-Answer or [S]kip: """)[:1].upper()
+Answer [A-D] or [S]kip: """)[:1].upper()
 
         #
         #If not a valid answer, ask again
@@ -298,38 +308,101 @@ Answer or [S]kip: """)[:1].upper()
             break
 
     #
-    #See if this is an naswer (not skip)
+    #See if this is an answer (not skip)
     #
     if answer != "S":
         #
         #If we're not adding this question to the skip list, see if the
         #answer is correct or not.
         #
-        if (ord(answer) - ord("A")) == new_correct_answer:
-            #
-            #Correct answer
-            #
-            print("Correct!")
-        else:
+        if answer != new_correct_answer:
             #
             #Incorrect answer
             #
+            print()
             print("Wrong, correct answer is:")
-            print("    {}. {}".format(chr(ord("A") + new_correct_answer),
-                answers[new_correct_answer]))
+            print(" " * 4 + new_correct_answer_text)
+            print()
+            input("Press <Enter> to continue.")
         #
-        #Ask next question
+        #Blank line, then ask next question
         #
         print()
         continue
 
+    ####################################################################
+    ####
+    #### We're marking this question to be skipped in the future
+    ####
+    ####################################################################
 
-                
+    print("Correct answer is:")
+    print("    {}. {}".format(new_correct_answer,
+        new_correct_answer_text))
 
+    #
+    #Make sure this question is to be skipped
+    #
+    skip_help = """
+Answer "Y" (or just press <Enter>) if you wish to skip this question in
+the future, or "N" (or anything else) if you wish to keep this question
+in the test.
+"""
+    answer = hamlibIO.get_input(skip_help, """
+Do you wish to skip this question in the future? [(Y), N]: """,
+        default="Y")[:1].upper()
+
+    #
+    #If we didn't answer with a "Y", don't skip this question.
+    #
+    if answer != "Y":
+        print("Question {} will remain in the test".format(question_number))
+        print()
+        continue
+
+    #
+    #Remove the question from the question pool. First, add it to the
+    #skipped questions dictonary.
+    #
+    questions_to_skip[question_number] = 1
+
+    #
+    #Now write out the dictonary keys (the list of questions) to the
+    #skip file.
+    #
+    #We use a dictonary to easily remove duplicates.
+    #
+    try:
+        f = open(skip_file, "w")
+        f.write("\n".join(sorted(questions_to_skip)))
+        f.close()
+
+    except:
+        print("""
+Warning: Unable to write file "{}"
+         Test will continue, skip question not saved.""".format(skip_file))
+
+    #
+    #Not necessary, but for consistency, continue the loop
+    #
     print()
+    continue
+
+    ####################################################################
+    ####
+    #### The bottom of the question loop.
+    ####
+    ####################################################################
+
+
 
 print("A total of {} questions, {} skipped".format(count, count - printed))
 print()
+
+#
+#Exit here. If you wish more details about the count of each element and
+#subelement, comment this exit out.
+#
 exit(0)
 
 for index, value in enumerate(element_questions):
@@ -338,4 +411,5 @@ for index, value in enumerate(element_questions):
         for key in sorted(subelement_questions[index]):
             if subelement_questions[index][key]:
                 print("   subelement {} has {} questions".format(key, subelement_questions[index][key]))
+
 exit(0)
