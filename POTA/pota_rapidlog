@@ -24,15 +24,27 @@ import shutil
 import sys
 import time
 
-re_comment = r'"[\ -\!\#-\~]*("|$)?'
-re_power = r'\d+W'
-adif_file_extension = ".adi"
-
 ####
 #### Import large tables and help files to de-clutter the program
 ####
 
+#
+#Put parent directory in the system path in order to import hamlibIO.py
+#from the directory above
+#
+this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+parent_dir = os.path.dirname(this_dir)
+sys.path.append(parent_dir)
+
 import hamlibIO
+
+####
+#### Global definitions
+####
+
+re_comment = r'"[\ -\!\#-\~]*("|$)?'
+re_power = r'\d+W'
+adif_file_extension = ".adi"
 
 #
 #This is the order that the ADIF tags will be placed into the file for

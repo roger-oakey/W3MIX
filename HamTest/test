@@ -52,6 +52,8 @@ test_files = {
     }
 skip_file = os.path.join(this_dir, "skip_questions")
 
+ordinal_of_A = ord("A")
+
 #
 #Read in the questions to skip and convert to a dictonary of skipped questions
 #
@@ -157,7 +159,8 @@ print_test = (print_test == "P")
 start_ques = """
 Enter the question to start with in the format:
     """ + test_level + """<digit><letter><digit><digit>
-or press <Enter> to start at the first question.
+    Example: """ + test_level + """3B05
+Or press <Enter> to start at the first question.
 """
 while(True):
     start_test = hamlibIO.get_input(
@@ -200,7 +203,7 @@ finder = re.compile(match_string, re.DOTALL | re.MULTILINE)
 format_question = """{}
 {}
 """
-format_answers = """{}. {}"""
+format_answers = """  {}. {}"""
 format_correct_answer = """
           {}: {} {}
 """
@@ -227,7 +230,7 @@ while result:
     #Move fields parsed by RE into variables with sane names
     #
     question_number = result.group(1).strip().upper()
-    original_correct_answer = ord(result.group(2).strip().upper()) - ord("A")
+    original_correct_answer = ord(result.group(2).strip().upper()) - ordinal_of_A
     regulations = result.group(3).strip()
     question = re.sub(r'\n', " ", result.group(4).strip())
 
@@ -265,7 +268,7 @@ while result:
         continue
 
     #
-    #Mrk no longer starting at a specific question number
+    #Mark no longer starting at a specific question number
     #
     start_test = ''
 
@@ -306,14 +309,14 @@ while result:
         #Save the new correct answer (character of correct answer).
         #
         if original_correct_answer == reorder[index]:
-            new_correct_answer = chr(ord("A") + index)
+            new_correct_answer = chr(ordinal_of_A + index)
             new_correct_answer_text = answers[reorder[index]]
 
         #
         #Print the answers in a random order determined by the
         #reorder list.
         #
-        print(format_answers.format(chr(ord("A") + index),
+        print(format_answers.format(chr(ordinal_of_A + index),
             answers[reorder[index]]))
 
     ####################################################################
