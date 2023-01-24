@@ -91,9 +91,11 @@ Error: In the "{}" file, the following question
        {}""".format(skip_file, ", ".join(bad_format)))
     exit(1)
 
-#
-#Ask which test to take
-#
+########################################################################
+####
+#### Ask which test to take
+####
+########################################################################
 test_ques = """
 Enter level of test you wish to take, [T]echnician, [G]eneral or
 [E]xtra. Only the first letter need be specified.
@@ -108,6 +110,9 @@ Enter test level: [T]echnician, [G]eneral or [E]xtra: """)[:1].upper()
     if test_level in test_files:
         break
 
+    print("""
+Error: Answer must be [T]echnician, [G]eneral or [E]xtra.""")
+
 try:
     f = open(os.path.join(this_dir, test_files[test_level]), "r")
     test_text = f.read()
@@ -117,11 +122,14 @@ except:
 Error: Unable to open test file "{}" """.format(test_files[test]))
     exit(1)
 
-#
-#Ask which test to take
-#
+########################################################################
+####
+#### Ask if the user wants to take the test or just print it.
+####
+########################################################################
 print_ques = """
-Enter if you want to [P]rint the test or [T]ake the test online.
+Enter if you want to [P]rint the test or [T]ake the test. Only the first
+letter need be specified.
 """
 while(True):
     print_test = hamlibIO.get_input(print_ques, """
@@ -133,20 +141,47 @@ Do you wish to [P]rint the test or [T]ake the test: """)[:1].upper()
     if print_test in ("P", "T"):
         break
 
+    print("""
+Error: Answer must be [P]rint or [T]ake.""")
+
 #
 #Make print_test True if the test is to be printed
 #
 print_test = (print_test == "P")
 
-try:
-    f = open(os.path.join(this_dir, test_files[test_level]), "r")
-    test_text = f.read()
-    f.close()
-except:
-    print("""
-Error: Unable to open test file "{}" """.format(test_files[test]))
-    exit(1)
+########################################################################
+####
+#### If taking test, ask what question to start with.
+####
+########################################################################
+start_ques = """
+Enter the question to start with in the format:
+    """ + test_level + """<digit><letter><digit><digit>
+or press <Enter> to start at the first question.
+"""
+while(True):
+    start_test = hamlibIO.get_input(
+        start_ques, """
+Enter question to start with or <Enter> to start at the beginning: """,
+        default='').upper()
 
+    #
+    #If it's a null string, start at the beginning of the test
+    #
+    if not start_test:
+        break
+
+    #
+    #See if it's a valid question number
+    #
+    if re.fullmatch(test_level + r'\d[A-Z]\d\d', start_test):
+        break
+
+    #
+    #Report invalid question number and ask again
+    #
+    print("""
+Error: Invalid question number format, type "?" for help.""")
 
 #
 #Blank line before test starts printing
@@ -218,6 +253,21 @@ while result:
     #
     test_text = finder.sub("", test_text, count = 1) #Strip this question off
     result = finder.match(test_text)                 #Read next question
+
+    ####################################################################
+    ####
+    #### If we're starting with a specific question, skip until we find
+    #### that question.
+    ####
+    ####################################################################
+
+    if start_test and (start_test != question_number):
+        continue
+
+    #
+    #Mrk no longer starting at a specific question number
+    #
+    start_test = ''
 
     ####################################################################
     ####
@@ -394,6 +444,13 @@ Warning: Unable to write file "{}"
     ####
     ####################################################################
 
+#
+#Check to see if we were given an invalid question number to satrt with
+#
+if start_test:
+    print("""Error: "{}" is not question found in the test.
+""".format(start_test))
+    exit(1)
 
 
 print("A total of {} questions, {} skipped".format(count, count - printed))
