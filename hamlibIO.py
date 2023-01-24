@@ -42,11 +42,11 @@ adx_records = "    <RECORDS>"
 adx_record  = "        <RECORD>"
 
 #
-#Simple hamlib.py exception to be used if error and halt
+#Simple hamlibIO.py exception to be used if error and halt
 #
 class hamlibIOerror(Exception):
     """
-    Exception for hamlib.py so we generate a stack trace and exit
+    Exception for hamlibIO.py so we generate a stack trace and exit
     """
     pass
 
@@ -83,16 +83,13 @@ script_name = os.path.basename(script_path)
 script_help = script_path + helpfile_extension
 
 #
-#See if a help file exists
+#Read in help file, if it exists
 #
-if os.path.exists(script_help):
-    #
-    #If the help file exists, read it in
-    #
+try:
     f = open(script_help, "r")
     script_help = f.read()
     f.close()
-else:
+except:
     #
     #No help file report no help
     #
@@ -5287,7 +5284,7 @@ for table in ("header_fields",
                 #
                 if dt not in data_types:
                     lib_errors += """
-Error: In hamlib.py, {0} field "{1}" has a data type of
+Error: In hamlibIO.py, {0} field "{1}" has a data type of
        "{2}" which is NOT in the data_types dictonary.
        Either correct the {0} "{1}" field datatype
        or add "{2}" to the data_types dictonary.
