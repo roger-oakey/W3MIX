@@ -109,7 +109,8 @@ SUBELEMENT E1  COMMISSION RULES [6 Exam Questions  6 Groups]
 E1A Operating Standards: frequency privileges; automatic message forwarding; stations aboard ships or aircraft; power restriction on 630 and 2200 meter bands
 
 E1A01 (A) [97.305, 97.307(b)]
-Which of the following carrier frequencies is illegal for LSB AFSK emissions on the 17 meter band RTTY and data segment of 18.068 to 18.110 MHz?
+Which of the following carrier frequencies is illegal for LSB
+AFSK emissions on the 17 meter band RTTY and data segment of 18.068 to 18.110 MHz?
 A. 18.068 MHz
 B. 18.100 MHz
 C. 18.107 MHz
@@ -1744,7 +1745,7 @@ A. Input impedance
 B. Output impedance
 C. Reflection coefficient
 D. All these choices are correct
-
+~~
 
 E4C Receiver performance characteristics: phase noise, noise floor, image rejection, MDS, signal-to-noise ratio, noise figure, reciprocal mixing; selectivity; effects of SDR receiver non-linearity; use of attenuators at low frequencies
 
@@ -3407,7 +3408,8 @@ What is a crystal lattice filter?
 A. A power supply filter made with interlaced quartz crystals
 B. An audio filter made with four quartz crystals that resonate at 1 kHz intervals
 C. A filter using lattice-shaped quartz crystals for high-Q performance
-D. A filter with narrow bandwidth and steep skirts made using quartz crystals ~~
+D. A filter with narrow bandwidth and steep skirts made using quartz crystals
+~~
 
 E7C10 (B)
 Which of the following filters would be the best choice for use in a 2 meter band repeater duplexer?
@@ -4250,6 +4252,7 @@ A. It is impossible
 B. Increasing analog-to-digital conversion resolution
 C. Using a more efficient digital code
 D. Using forward error correction
+~~
 
 E8C11 (A)
 What is the relationship between symbol rate and baud?

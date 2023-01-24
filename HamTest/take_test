@@ -23,22 +23,10 @@ Using errata in word document, apply changes to text document.
 ###############################################################################
 ###############################################################################
 
-####
-#### Global definitions
-####
-
-take_test_version = "00.2023.01.22"
-
-test_files = {
-    "E" : "test_extra",
-    "G" : "test_general",
-    "T" : "test_technician"
-    }
-skip_file = "skip_questions"
-
 import os
 import random
 import re
+import string
 import sys
 
 #
@@ -46,9 +34,23 @@ import sys
 #from the directory above
 #
 this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-sys.path.append(os.path.dirname(this_dir))
+parent_dir = os.path.dirname(this_dir)
+sys.path.append(parent_dir)
 
 import hamlibIO
+
+####
+#### Global definitions
+####
+
+take_test_version = "00.2023.01.22"
+
+test_files = {
+    "E" : os.path.join(this_dir, "test_extra"),
+    "G" : os.path.join(this_dir, "test_general"),
+    "T" : os.path.join(this_dir, "test_technician")
+    }
+skip_file = os.path.join(this_dir, "skip_questions")
 
 #
 #Read in the questions to skip and convert to a dictonary of skipped questions
@@ -97,23 +99,57 @@ Enter level of test you wish to take, [T]echnician, [G]eneral or
 [E]xtra. Only the first letter need be specified.
 """
 while(True):
-    test = hamlibIO.get_input(test_ques, """
+    test_level = hamlibIO.get_input(test_ques, """
 Enter test level: [T]echnician, [G]eneral or [E]xtra: """)[:1].upper()
 
     #
     #If not a valid answer, ask again
     #
-    if test in test_files:
+    if test_level in test_files:
         break
 
 try:
-    f = open(os.path.join(this_dir, test_files[test]), "r")
+    f = open(os.path.join(this_dir, test_files[test_level]), "r")
     test_text = f.read()
     f.close()
 except:
     print("""
 Error: Unable to open test file "{}" """.format(test_files[test]))
     exit(1)
+
+
+
+
+#
+#Ask which test to take
+#
+print_ques = """
+Enter if you want to [P]rint the test or [T]ake the test online.
+"""
+while(True):
+    print_test = hamlibIO.get_input(print_ques, """
+Do you wish to [P]rint the test or [T]ake the test: """)[:1].upper()
+
+    #
+    #If not a valid answer, ask again
+    #
+    if print_test in ("P", "T"):
+        break
+
+#
+#Make print_test True if the test is to be printed
+#
+print_test = (print_test == "P")
+
+try:
+    f = open(os.path.join(this_dir, test_files[test_level]), "r")
+    test_text = f.read()
+    f.close()
+except:
+    print("""
+Error: Unable to open test file "{}" """.format(test_files[test]))
+    exit(1)
+
 
 #
 #Blank line before test starts printing
@@ -123,9 +159,7 @@ print()
 #
 #Compile regular expression to parse questions
 #
-match_string_hold = r'(.*?)(' + test + r'\d[A-Z]\d{2}).*?\((.*?)\)(.*?)$(.*?)~~'
-match_string_hold2 = r'(.*?)(' + test + r'\d[A-Z]\d{2})\s*\(([A-D])\)\s*(.*?)$(.*?)^\s*A\.\s*(.+?)$^\s*B\.\s*(.+?)$^\s*C\.\s*(.+?)$^\s*D\.\s*(.+?)$(.*?)~~'
-match_string = r'(.*?)(' + test + r'\d[A-Z]\d{2})\s*\(([A-D])\)(.*?)$(.*?)^\s*A\.\s*(.+?)^\s*B\.\s*(.+?)$\s*C\.\s*(.+?)^\s*D\.\s*(.+?)^.*?~~'
+match_string = r'.*?(' + test_level + r'\d[A-Z]\d{2})\s*\(([A-D])\)(.*?)$[\n\r]+(.*?)$[\n\r]+\s*A.\s(.*?)$[\n\r]+\s*B\.\s*(.+?)$[\n\r]+\s*C\.\s*(.+?)$[\n\r]+\s*D\.\s*(.+?)$[\n\r]+\s*~~$'
 finder = re.compile(match_string, re.DOTALL | re.MULTILINE)
 
 #
@@ -145,79 +179,163 @@ format_correct_answer = """
 count = 0
 printed = 0
 
+element_letters = dict(zip(string.ascii_uppercase, [0] * 26))
+subelement_questions = []
+for i in range(10):
+    subelement_questions.append(element_letters.copy())
+element_questions = [0] * 10
+reorder = [index for index in range(4)]
+
 #
-#Find initial match
+#Find initial question
 #
 result = finder.match(test_text)
 while result:
-
-    count+= 1
-
     #
     #Move fields parsed by RE into variables with sane names
     #
-    question_number = result.group(2).strip().upper()
-    original_correct_answer = ord(result.group(3).strip().upper()) - ord("A")
-    regulations = result.group(4).strip()
-    question = re.sub(r'\n', " ", result.group(5).strip())
+    question_number = result.group(1).strip().upper()
+    original_correct_answer = ord(result.group(2).strip().upper()) - ord("A")
+    regulations = result.group(3).strip()
+    question = re.sub(r'\n', " ", result.group(4).strip())
 
     #
     #Build list of answers
     #
     answers = []
-    for index in range(6, 10):
+    for index in range(5, 9):
         answers.append(re.sub(r'\n', " ", result.group(index).strip()))
+
+    #
+    #Count total questions and element and subelement questions.
+    count+= 1
+    element_questions[int(question_number[1:2])] += 1
+    subelement_questions[int(question_number[1:2])][question_number[2:3]] += 1
+
+    #
+    #We've captured all fields from this question, parse next
+    #question before we decide to print the answer or prompt the
+    #user for the answer. This will setup the information required for
+    #the bottom of the loop evaluation...
+    #
+    test_text = finder.sub("", test_text, count = 1) #Strip this question off
+    result = finder.match(test_text)                 #Read next question
+
+    if question_number in questions_to_skip:
+        #
+        #Skip this question and go onto the one already read in...
+        #
+        continue
+
+    #
+    #Count the number of printed questions
+    #
+    printed += 1
+
+    #
+    #Print the question number and the question
+    #
+    print(format_question.format(question_number,
+                                 question))
 
     #
     #Randomize the answer order
     #
-    reorder = [index for index in range(4)]
     random.shuffle(reorder)
 
-    if question_number not in questions_to_skip:
+    #
+    #Print the four answers reordered randomly and save the new right
+    #answer.
+    #
+    for index in range(4):
         #
-        #Print the question number and the question
+        #Save the new correct answer (index where the correct
+        #answer moved to).
         #
-        printed += 1
-        print(format_question.format(question_number,
-                                     question))
-        #
-        #Print the four answers reordered randomly and save new right
-        #answer.
-        #
-        for index in range(4):
-            #
-            #Save the new correct answer (index where the correct
-            #answer moved to).
-            #
-            if original_correct_answer == reorder[index]:
-                new_correct_answer = index
-
-            #
-            #Print the answers in a random order determined by the
-            #reorder list.
-            #
-            print(format_answers.format(chr(ord("A") + index),
-                answers[reorder[index]]))
+        if original_correct_answer == reorder[index]:
+            new_correct_answer = index
 
         #
-        #Print the correct answer and any regulations it qoutes
+        #Print the answers in a random order determined by the
+        #reorder list.
+        #
+        print(format_answers.format(chr(ord("A") + index),
+            answers[reorder[index]]))
+
+    #
+    #If the test is just to be printed, print the answer
+    #
+    if print_test:
+        #
+        #Print the correct answer and any regulations it has associated
+        #with the answer.
         #
         print(format_correct_answer.format(
             question_number,
             chr(ord("A") + new_correct_answer),
             regulations))
+        #
+        #Print next question
+        #
+        continue
 
     #
-    #Remove everything up to and including the question just formatted
+    #We're administing the test; ask for the answewr or skip
     #
-    test_text = finder.sub("", test_text, count = 1)
+    answer_help = """
+Enter the answer "A", "B", "C" or "D" or enter [S]kip if you wish to
+have this question added to the skip list (because it's easy and you
+don't need to be asked it anymore).
+"""
+    while(True):
+        answer = hamlibIO.get_input(answer_help, """
+Answer or [S]kip: """)[:1].upper()
+
+        #
+        #If not a valid answer, ask again
+        #
+        if answer in ("A", "B", "C", "D", "S"):
+            break
 
     #
-    #Find next question, return False (and exit loop) if no question found
+    #See if this is an naswer (not skip)
     #
-    result = finder.match(test_text)
+    if answer != "S":
+        #
+        #If we're not adding this question to the skip list, see if the
+        #answer is correct or not.
+        #
+        if (ord(answer) - ord("A")) == new_correct_answer:
+            #
+            #Correct answer
+            #
+            print("Correct!")
+        else:
+            #
+            #Incorrect answer
+            #
+            print("Wrong, correct answer is:")
+            print("    {}. {}".format(chr(ord("A") + new_correct_answer),
+                answers[new_correct_answer]))
+        #
+        #Ask next question
+        #
+        print()
+        continue
+
+
+                
+
+    print()
 
 print("A total of {} questions, {} skipped".format(count, count - printed))
+print()
+exit(0)
 
+for index, value in enumerate(element_questions):
+    if value:
+        print("Element {}{} has {} questions".format(test_level, index, value))
+        for key in sorted(subelement_questions[index]):
+            if subelement_questions[index][key]:
+                print("   subelement {} has {} questions".format(key, subelement_questions[index][key]))
 exit(0)
