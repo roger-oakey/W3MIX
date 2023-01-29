@@ -1,0 +1,475 @@
+#!/usr/bin/python3
+
+"""
+Go here to find question pools: http://www.ncvec.org/
+
+Download word and text document of pool.
+
+Move text document to Ubuntu.
+
+install isutf8: sudo apt install moreutils
+
+Run isutf8 against text document, removing all invalid characters. Use word document to determine what characters should be, if necessary.
+
+Using errata in word document, apply changes to text document.
+"""
+
+###############################################################################
+###############################################################################
+####
+#### Ham test testing program. Read all questions for a specific license and
+#### ask them all, scrambing the answer order, skipping really easy questions.
+####
+###############################################################################
+###############################################################################
+
+import os
+import random
+import re
+import string
+import sys
+
+#
+#Put parent directory in the system path in order to import hamlibIO.py
+#from the directory above
+#
+this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+parent_dir = os.path.dirname(this_dir)
+sys.path.append(parent_dir)
+
+import hamlibIO
+
+####
+#### Global definitions
+####
+
+take_test_version = "00.2023.01.22"
+
+test_files = {
+    "E" : os.path.join(this_dir, "test_extra"),
+    "G" : os.path.join(this_dir, "test_general"),
+    "T" : os.path.join(this_dir, "test_technician")
+    }
+skip_file = os.path.join(this_dir, "skip_questions")
+
+ordinal_of_A = ord("A")
+
+#
+#Read in the questions to skip and convert to a dictonary of skipped questions
+#
+try:
+    f = open(skip_file, "r")
+    ques = f.read()
+    f.close()
+except:
+    ques = ""
+
+questions_to_skip = {}
+bad_format = []
+for skip_ques in re.split(r'[,; \n]+', ques):
+    #
+    #Skip null entries
+    #
+    if not skip_ques:
+        continue
+
+    #
+    #Validate question format, add to bad format list if not in
+    #correct format.
+    #
+    if not re.fullmatch(r'[EGT]\d[A-Z]\d{2}', skip_ques):
+        bad_format.append(skip_ques)
+        continue
+
+    #
+    #Add the question to skip to the list
+    #
+    questions_to_skip[skip_ques] = 1
+
+if bad_format:
+    print("""\
+Error: In the "{}" file, the following question
+       numbers to skip have a bad format:
+       {}""".format(skip_file, ", ".join(bad_format)))
+    exit(1)
+
+########################################################################
+####
+#### Ask which test to take
+####
+########################################################################
+test_ques = """
+Enter level of test you wish to take, [T]echnician, [G]eneral or
+[E]xtra. Only the first letter need be specified.
+"""
+while(True):
+    test_level = hamlibIO.get_input(test_ques, """
+Enter test level: [T]echnician, [G]eneral or [E]xtra: """)[:1].upper()
+
+    #
+    #If not a valid answer, ask again
+    #
+    if test_level in test_files:
+        break
+
+    print("""
+Error: Answer must be [T]echnician, [G]eneral or [E]xtra.""")
+
+try:
+    f = open(os.path.join(this_dir, test_files[test_level]), "r")
+    test_text = f.read()
+    f.close()
+except:
+    print("""
+Error: Unable to open test file "{}" """.format(test_files[test]))
+    exit(1)
+
+########################################################################
+####
+#### Ask if the user wants to take the test or just print it.
+####
+########################################################################
+print_ques = """
+Enter if you want to [P]rint the test or [T]ake the test. Only the first
+letter need be specified.
+"""
+while(True):
+    print_test = hamlibIO.get_input(print_ques, """
+Do you wish to [P]rint the test or [T]ake the test: """)[:1].upper()
+
+    #
+    #If not a valid answer, ask again
+    #
+    if print_test in ("P", "T"):
+        break
+
+    print("""
+Error: Answer must be [P]rint or [T]ake.""")
+
+#
+#Make print_test True if the test is to be printed
+#
+print_test = (print_test == "P")
+
+########################################################################
+####
+#### If taking test, ask what question to start with.
+####
+########################################################################
+start_ques = """
+Enter the question to start with in the format:
+    """ + test_level + """<digit><letter><digit><digit>
+    Example: """ + test_level + """3B05
+Or press <Enter> to start at the first question.
+"""
+while(True):
+    start_test = hamlibIO.get_input(
+        start_ques, """
+Enter question to start with or <Enter> to start at the beginning: """,
+        default='').upper()
+
+    #
+    #If it's a null string, start at the beginning of the test
+    #
+    if not start_test:
+        break
+
+    #
+    #See if it's a valid question number
+    #
+    if re.fullmatch(test_level + r'\d[A-Z]\d\d', start_test):
+        break
+
+    #
+    #Report invalid question number and ask again
+    #
+    print("""
+Error: Invalid question number format, type "?" for help.""")
+
+#
+#Blank line before test starts printing
+#
+print()
+
+#
+#Compile regular expression to parse questions
+#
+match_string = r'.*?(' + test_level + r'\d[A-Z]\d{2})\s*\(([A-D])\)(.*?)$[\n\r]+(.*?)$[\n\r]+\s*A.\s(.*?)$[\n\r]+\s*B\.\s*(.+?)$[\n\r]+\s*C\.\s*(.+?)$[\n\r]+\s*D\.\s*(.+?)$[\n\r]+\s*~~$'
+finder = re.compile(match_string, re.DOTALL | re.MULTILINE)
+
+#
+#Format string to reformat questions with answer after them
+#
+format_question = """{}
+{}
+"""
+format_answers = """  {}. {}"""
+format_correct_answer = """
+          {}: {} {}
+"""
+
+#
+#Count the number of questions and questions printed
+#
+count = 0
+printed = 0
+
+element_letters = dict(zip(string.ascii_uppercase, [0] * 26))
+subelement_questions = []
+for i in range(10):
+    subelement_questions.append(element_letters.copy())
+element_questions = [0] * 10
+reorder = [index for index in range(4)]
+
+#
+#Find initial question
+#
+result = finder.match(test_text)
+while result:
+    #
+    #Move fields parsed by RE into variables with sane names
+    #
+    question_number = result.group(1).strip().upper()
+    original_correct_answer = ord(result.group(2).strip().upper()) - ordinal_of_A
+    regulations = result.group(3).strip()
+    question = re.sub(r'\n', " ", result.group(4).strip())
+
+    #
+    #Build list of answers
+    #
+    answers = []
+    for index in range(5, 9):
+        answers.append(re.sub(r'\n', " ", result.group(index).strip()))
+
+    #
+    #Count total questions and element and subelement questions.
+    #
+    count+= 1
+    element_questions[int(question_number[1:2])] += 1
+    subelement_questions[int(question_number[1:2])][question_number[2:3]] += 1
+
+    #
+    #We've captured all the parsed fields from this question. Parse the
+    #next question before we move forward so each decision we make
+    #below can simply end with a "continue" statement because we have
+    #the next question parsed and ready to go.
+    #
+    test_text = finder.sub("", test_text, count = 1) #Strip this question off
+    result = finder.match(test_text)                 #Read next question
+
+    ####################################################################
+    ####
+    #### If we're starting with a specific question, skip until we find
+    #### that question.
+    ####
+    ####################################################################
+
+    if start_test and (start_test != question_number):
+        continue
+
+    #
+    #Mark no longer starting at a specific question number
+    #
+    start_test = ''
+
+    ####################################################################
+    ####
+    #### Skip this question if in skip list
+    ####
+    ####################################################################
+
+    if question_number in questions_to_skip:
+        #
+        #Skip this question.
+        #
+        continue
+
+    #
+    #Count the number of printed questions
+    #
+    printed += 1
+
+    #
+    #Print the question number and the question
+    #
+    print(format_question.format(question_number,
+                                 question))
+
+    #
+    #Randomize the answer order
+    #
+    random.shuffle(reorder)
+
+    #
+    #Print the four answers reordered randomly and save the new right
+    #answer.
+    #
+    for index in range(4):
+        #
+        #Save the new correct answer (character of correct answer).
+        #
+        if original_correct_answer == reorder[index]:
+            new_correct_answer = chr(ordinal_of_A + index)
+            new_correct_answer_text = answers[reorder[index]]
+
+        #
+        #Print the answers in a random order determined by the
+        #reorder list.
+        #
+        print(format_answers.format(chr(ordinal_of_A + index),
+            answers[reorder[index]]))
+
+    ####################################################################
+    ####
+    #### If test just to be printed, print the answser
+    ####
+    ####################################################################
+
+    if print_test:
+        #
+        #Print the correct answer and any regulations it has associated
+        #with the answer.
+        #
+        print(format_correct_answer.format(
+            question_number,
+            new_correct_answer,
+            regulations))
+        #
+        #Print next question
+        #
+        continue
+
+    ####################################################################
+    ####
+    #### We're administring the test, ask for an answer or skip
+    ####
+    ####################################################################
+
+    answer_help = """
+Enter the answer "A", "B", "C" or "D" or enter [S]kip if you wish to
+have this question added to the skip list (because it's easy and you
+don't need to be asked it anymore).
+"""
+    while(True):
+        answer = hamlibIO.get_input(answer_help, """
+Answer [A-D] or [S]kip: """)[:1].upper()
+
+        #
+        #If not a valid answer, ask again
+        #
+        if answer in ("A", "B", "C", "D", "S"):
+            break
+
+    #
+    #See if this is an answer (not skip)
+    #
+    if answer != "S":
+        #
+        #If we're not adding this question to the skip list, see if the
+        #answer is correct or not.
+        #
+        if answer != new_correct_answer:
+            #
+            #Incorrect answer
+            #
+            print()
+            print("Wrong, correct answer is:")
+            print(" " * 4 + new_correct_answer_text)
+            print()
+            input("Press <Enter> to continue.")
+        #
+        #Blank line, then ask next question
+        #
+        print()
+        continue
+
+    ####################################################################
+    ####
+    #### We're marking this question to be skipped in the future
+    ####
+    ####################################################################
+
+    print("Correct answer is:")
+    print("    {}. {}".format(new_correct_answer,
+        new_correct_answer_text))
+
+    #
+    #Make sure this question is to be skipped
+    #
+    skip_help = """
+Answer "Y" (or just press <Enter>) if you wish to skip this question in
+the future, or "N" (or anything else) if you wish to keep this question
+in the test.
+"""
+    answer = hamlibIO.get_input(skip_help, """
+Do you wish to skip this question in the future? [(Y), N]: """,
+        default="Y")[:1].upper()
+
+    #
+    #If we didn't answer with a "Y", don't skip this question.
+    #
+    if answer != "Y":
+        print("Question {} will remain in the test".format(question_number))
+        print()
+        continue
+
+    #
+    #Remove the question from the question pool. First, add it to the
+    #skipped questions dictonary.
+    #
+    questions_to_skip[question_number] = 1
+
+    #
+    #Now write out the dictonary keys (the list of questions) to the
+    #skip file.
+    #
+    #We use a dictonary to easily remove duplicates.
+    #
+    try:
+        f = open(skip_file, "w")
+        f.write("\n".join(sorted(questions_to_skip)))
+        f.close()
+
+    except:
+        print("""
+Warning: Unable to write file "{}"
+         Test will continue, skip question not saved.""".format(skip_file))
+
+    #
+    #Not necessary, but for consistency, continue the loop
+    #
+    print()
+    continue
+
+    ####################################################################
+    ####
+    #### The bottom of the question loop.
+    ####
+    ####################################################################
+
+#
+#Check to see if we were given an invalid question number to satrt with
+#
+if start_test:
+    print("""Error: "{}" is not question found in the test.
+""".format(start_test))
+    exit(1)
+
+
+print("A total of {} questions, {} skipped".format(count, count - printed))
+print()
+
+#
+#Exit here. If you wish more details about the count of each element and
+#subelement, comment this exit out.
+#
+exit(0)
+
+for index, value in enumerate(element_questions):
+    if value:
+        print("Element {}{} has {} questions".format(test_level, index, value))
+        for key in sorted(subelement_questions[index]):
+            if subelement_questions[index][key]:
+                print("   subelement {} has {} questions".format(key, subelement_questions[index][key]))
+
+exit(0)

@@ -1,0 +1,63 @@
+#!/usr/bin/python3
+
+###############################################################################
+###############################################################################
+####
+#### Simple POTA logging program that allows freeform input of contacts
+####
+###############################################################################
+###############################################################################
+
+####
+#### Global definitions
+####
+
+pota_rapidlog_version = "00.2022.11.04"
+
+####
+#### Import support modules
+####
+
+import re
+
+searches = (
+    r'ko.{3}',
+    r'wo.{3}',
+    r'no.{3}',
+    r'ki.{3}',
+    r'wi.{3}',
+    r'ni.{3}',
+    r'ke.{3}',
+    r'we.{3}',
+    r'ne.{3}',
+    r'ks.{3}',
+    r'ws.{3}',
+    r'ns.{3}',
+    r'.{3}',
+    )
+
+
+f = open("words.txt", "r")
+
+word = f.readline()
+words = []
+while (word):
+    words.append(word.strip())
+    word = f.readline()
+f.close()
+
+words.sort()
+
+last_letter = ""
+for re_string in searches:
+    re_exp = re.compile(re_string, re.IGNORECASE)
+    for word in words:
+    
+        if re.fullmatch(re_exp, word):
+
+            if word[:1] != last_letter:
+                print("")
+                last_letter = word[:1]
+            print(word)
+
+exit()
