@@ -52,7 +52,14 @@ test_files = {
     }
 skip_file = os.path.join(this_dir, "skip_questions")
 
-ordinal_of_A = ord("A")
+#
+#Character to offset and offset to character functions
+#
+def chr2off(letter:str):
+    return(ord(letter) - ord("A"))
+
+def off2chr(off:int):
+    return(chr(off + ord("A")))
 
 #
 #Read in the questions to skip and convert to a dictonary of skipped questions
@@ -201,10 +208,9 @@ finder = re.compile(match_string, re.DOTALL | re.MULTILINE)
 #Format string to reformat questions with answer after them
 #
 format_question = """{}
-{}
-"""
-format_answers = """  {}. {}"""
-format_correct_answer = """
+{}"""
+format_answers = """\n  {}. {}"""
+format_correct_answer = """\n
           {}: {} {}
 """
 
@@ -222,6 +228,10 @@ element_questions = [0] * 10
 reorder = [index for index in range(4)]
 
 #
+#Keep track of wrong answers
+#
+wrong_answers = []
+#
 #Find initial question
 #
 result = finder.match(test_text)
@@ -230,7 +240,7 @@ while result:
     #Move fields parsed by RE into variables with sane names
     #
     question_number = result.group(1).strip().upper()
-    original_correct_answer = ord(result.group(2).strip().upper()) - ordinal_of_A
+    original_correct_answer = chr2off(result.group(2).strip().upper())
     regulations = result.group(3).strip()
     question = re.sub(r'\n', " ", result.group(4).strip())
 
@@ -290,10 +300,10 @@ while result:
     printed += 1
 
     #
-    #Print the question number and the question
+    #Format the question number and the question
     #
-    print(format_question.format(question_number,
-                                 question))
+    question = format_question.format(question_number,
+                                 question)
 
     #
     #Randomize the answer order
@@ -301,7 +311,7 @@ while result:
     random.shuffle(reorder)
 
     #
-    #Print the four answers reordered randomly and save the new right
+    #Format the four answers reordered randomly and save the new right
     #answer.
     #
     for index in range(4):
@@ -309,19 +319,25 @@ while result:
         #Save the new correct answer (character of correct answer).
         #
         if original_correct_answer == reorder[index]:
-            new_correct_answer = chr(ordinal_of_A + index)
+            new_correct_answer = off2chr(index)
             new_correct_answer_text = answers[reorder[index]]
 
         #
         #Print the answers in a random order determined by the
         #reorder list.
         #
-        print(format_answers.format(chr(ordinal_of_A + index),
-            answers[reorder[index]]))
+        question += format_answers.format(off2chr(index),
+            answers[reorder[index]])
+
+    correct_answer_formatted = format_correct_answer.format(
+            question_number,
+            new_correct_answer,
+            regulations)
 
     ####################################################################
     ####
-    #### If test just to be printed, print the answser
+    #### Print question and if test just to be printed, print the
+    #### answser.
     ####
     ####################################################################
 
@@ -330,14 +346,13 @@ while result:
         #Print the correct answer and any regulations it has associated
         #with the answer.
         #
-        print(format_correct_answer.format(
-            question_number,
-            new_correct_answer,
-            regulations))
+        print(question + correct_answer_formatted)
         #
         #Print next question
         #
         continue
+
+    print(question)
 
     ####################################################################
     ####
@@ -346,19 +361,32 @@ while result:
     ####################################################################
 
     answer_help = """
-Enter the answer "A", "B", "C" or "D" or enter [S]kip if you wish to
+Enter the answer "A", "B", "C" or "D" [S]kip or [E]xit.
+[S]kip if you wish to
 have this question added to the skip list (because it's easy and you
 don't need to be asked it anymore).
+[E]xit if you wish to exit the test and see a summary of wrong answers.
 """
     while(True):
         answer = hamlibIO.get_input(answer_help, """
-Answer [A-D] or [S]kip: """)[:1].upper()
+Answer [A-D], [S]kip or [E]xit: """, exit_ok=False)[:1].upper()
 
         #
         #If not a valid answer, ask again
         #
-        if answer in ("A", "B", "C", "D", "S"):
+        if answer in ("A", "B", "C", "D", "E", "S"):
             break
+
+    #
+    #See if this is exit
+    #
+    if answer == "E":
+        if wrong_answers:
+            print("""\n\nQuestions missed:
+""")
+        for ques in wrong_answers:
+            print(ques)
+        exit(0)
 
     #
     #See if this is an answer (not skip)
@@ -372,6 +400,7 @@ Answer [A-D] or [S]kip: """)[:1].upper()
             #
             #Incorrect answer
             #
+            wrong_answers.append(question + correct_answer_formatted)
             print()
             print("Wrong, correct answer is:")
             print(" " * 4 + new_correct_answer_text)
@@ -403,7 +432,7 @@ in the test.
 """
     answer = hamlibIO.get_input(skip_help, """
 Do you wish to skip this question in the future? [(Y), N]: """,
-        default="Y")[:1].upper()
+        default="Y", exit_ok=False)[:1].upper()
 
     #
     #If we didn't answer with a "Y", don't skip this question.

@@ -5373,12 +5373,8 @@ def get_input(prompt_help, prompt, default=None, exit_ok=True):
         #
         #If we can exit at this point and "EXIT" entered, exit
         #
-        if text.upper() == "EXIT":
-            if exit_ok:
-                sys.exit(0)
-            else:
-                print("Cannot exit at this point.\n\n")
-                continue
+        if exit_ok and (text.upper() == "EXIT"):
+            sys.exit(0)
 
         #
         #If input is "?" or just <Enter> (null string - ""), print
