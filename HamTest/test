@@ -352,64 +352,83 @@ while result:
         #
         continue
 
-    print(question)
+    #
+    #Keep asking the question until it's answered correctly.
+    #
+    answer = ""
+    saved_wrong_answer = False
+    while answer != new_correct_answer:
 
-    ####################################################################
-    ####
-    #### We're administring the test, ask for an answer or skip
-    ####
-    ####################################################################
+        print(question)
 
-    answer_help = """
+        ####################################################################
+        ####
+        #### We're administring the test, ask for an answer or skip
+        ####
+        ####################################################################
+
+        answer_help = """
 Enter the answer "A", "B", "C" or "D" [S]kip or [E]xit.
 [S]kip if you wish to
 have this question added to the skip list (because it's easy and you
 don't need to be asked it anymore).
 [E]xit if you wish to exit the test and see a summary of wrong answers.
 """
-    while(True):
-        answer = hamlibIO.get_input(answer_help, """
-Answer [A-D], [S]kip or [E]xit: """, exit_ok=False)[:1].upper()
+        while(True):
+            answer = hamlibIO.get_input(answer_help, """
+    Answer [A-D], [S]kip or [E]xit: """, exit_ok=False)[:1].upper()
+
+            #
+            #If not a valid answer, ask again
+            #
+            if answer in ("A", "B", "C", "D", "E", "S"):
+                break
 
         #
-        #If not a valid answer, ask again
+        #See if this is exit
         #
-        if answer in ("A", "B", "C", "D", "E", "S"):
+        if answer == "E":
+            if wrong_answers:
+                print("""\n\nQuestions missed:
+    """)
+            for ques in wrong_answers:
+                print(ques)
+            exit(0)
+
+        #
+        #See if we're skipping this question. If we are, break out of
+        #of question asking loop. Note the while-else will NOT be
+        #executed.
+        #
+        if answer == "S":
             break
 
-    #
-    #See if this is exit
-    #
-    if answer == "E":
-        if wrong_answers:
-            print("""\n\nQuestions missed:
-""")
-        for ques in wrong_answers:
-            print(ques)
-        exit(0)
-
-    #
-    #See if this is an answer (not skip)
-    #
-    if answer != "S":
         #
         #If we're not adding this question to the skip list, see if the
         #answer is correct or not.
         #
         if answer != new_correct_answer:
             #
-            #Incorrect answer
+            #Incorrect answer. Save it if it's the first time answered
+            #wrong.
             #
-            wrong_answers.append(question + correct_answer_formatted)
+            #
+            if not saved_wrong_answer:
+                wrong_answers.append(question + correct_answer_formatted)
+                saved_wrong_answer = True
             print()
-            print("Wrong, correct answer is:")
+            print("**** Wrong, correct answer is: ************************************************")
             print(" " * 4 + new_correct_answer_text)
-            print()
-            input("Press <Enter> to continue.")
         #
         #Blank line, then ask next question
         #
         print()
+
+    #
+    #If we exited question asking loop, we have a correct answer.
+    #Continue on to ask next question.
+    #
+    else:
         continue
 
     ####################################################################
