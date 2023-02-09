@@ -52,6 +52,7 @@ test_files = {
     }
 skip_file = os.path.join(this_dir, "skip_questions")
 
+skip_valid_answers = ("A", "B", "C", "D")
 valid_answers = ("A", "B", "C", "D", "E", "S")
 
 #
@@ -413,24 +414,17 @@ Answer [A-D], [S]kip or [E]xit: """, exit_ok=False)[:1].upper()
             ####
             ############################################################
 
-            print("Correct answer is:")
-            print("    {}. {}".format(new_correct_answer,
-                new_correct_answer_text))
-
             #
             #Make sure this question is to be skipped
             #
-            answer = hamlibIO.get_input(skip_help, """
-Do you wish to skip this question in the future? [(Y), N]: """,
-                default="Y", exit_ok=False)[:1].upper()
+            while(answer not in skip_valid_answers):
+                answer = hamlibIO.get_input(skip_help, """
+Enter correct answer to skip this question [A-D]: """, exit_ok=False)[:1].upper()
 
             #
-            #If we didn't answer with a "Y", don't skip this question
-            #and ask it again.
+            #If we gave the correct answer, skip this question.
             #
-            if answer != "Y":
-                print("Question {} will remain in the test".format(question_number))
-            else:
+            if answer == new_correct_answer:
                 #
                 #Remove the question from the question pool. First, add
                 #it to the skipped questions dictonary.
@@ -454,11 +448,16 @@ Do you wish to skip this question in the future? [(Y), N]: """,
 Warning: Unable to write file "{}"
          Test will continue, skip question not saved.""".format(skip_file))
 
+                #
+                #Break out of asking the question
+                #
+                print()
+                break
+
             #
-            #Always re-ask the question
+            #Note that if we didn't give the correct answer, we just
+            #fall into checking the answer
             #
-            print()
-            continue
 
         ################################################################
         ####
