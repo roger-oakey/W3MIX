@@ -17,7 +17,7 @@ Using errata in word document, apply changes to text document.
 ###############################################################################
 ###############################################################################
 ####
-#### Ham test testing program. Read all questions for a specific license and
+#### Ham test testing program. Read all questions for the specified license and
 #### ask them all, scrambing the answer order, skipping really easy questions.
 ####
 ###############################################################################
@@ -51,6 +51,25 @@ test_files = {
     "T" : os.path.join(this_dir, "test_technician")
     }
 skip_file = os.path.join(this_dir, "skip_questions")
+
+valid_answers = ("A", "B", "C", "D", "E", "S")
+
+#
+#In-loop question help
+#
+answer_help = """
+Enter the answer "A", "B", "C" or "D" [S]kip or [E]xit.
+[S]kip if you wish to
+have this question added to the skip list (because it's easy and you
+don't need to be asked it anymore).
+[E]xit if you wish to exit the test and see a summary of wrong answers.
+"""
+
+skip_help = """
+Answer "Y" (or just press <Enter>) if you wish to skip this question in
+the future, or "N" (or anything else) if you wish to keep this question
+in the test.
+"""
 
 #
 #Character to offset and offset to character functions
@@ -105,6 +124,7 @@ Error: In the "{}" file, the following question
 #### Ask which test to take
 ####
 ########################################################################
+
 test_ques = """
 Enter level of test you wish to take, [T]echnician, [G]eneral or
 [E]xtra. Only the first letter need be specified.
@@ -136,6 +156,7 @@ Error: Unable to open test file "{}" """.format(test_files[test]))
 #### Ask if the user wants to take the test or just print it.
 ####
 ########################################################################
+
 print_ques = """
 Enter if you want to [P]rint the test or [T]ake the test. Only the first
 letter need be specified.
@@ -163,6 +184,7 @@ print_test = (print_test == "P")
 #### If taking test, ask what question to start with.
 ####
 ########################################################################
+
 start_ques = """
 Enter the question to start with in the format:
     """ + test_level + """<digit><letter><digit><digit>
@@ -352,56 +374,100 @@ while result:
         #
         continue
 
-    #
-    #Keep asking the question until it's answered correctly.
-    #
+    ####################################################################
+    ####
+    #### We're administring the test, print question and ask for an
+    #### answer, skip or exit.
+    ####
+    #### Question re-ask loop - keep asking the question until it's
+    #### answered correctly.
+    ####
+    ####################################################################
+
     answer = ""
-    saved_wrong_answer = False
+    save_wrong_answer = True
     while answer != new_correct_answer:
 
         print(question)
 
-        ####################################################################
-        ####
-        #### We're administring the test, ask for an answer or skip
-        ####
-        ####################################################################
-
-        answer_help = """
-Enter the answer "A", "B", "C" or "D" [S]kip or [E]xit.
-[S]kip if you wish to
-have this question added to the skip list (because it's easy and you
-don't need to be asked it anymore).
-[E]xit if you wish to exit the test and see a summary of wrong answers.
-"""
-        while(True):
+        answer = ""
+        while(answer not in valid_answers):
             answer = hamlibIO.get_input(answer_help, """
-    Answer [A-D], [S]kip or [E]xit: """, exit_ok=False)[:1].upper()
-
-            #
-            #If not a valid answer, ask again
-            #
-            if answer in ("A", "B", "C", "D", "E", "S"):
-                break
+Answer [A-D], [S]kip or [E]xit: """, exit_ok=False)[:1].upper()
 
         #
-        #See if this is exit
+        #See if this is exit. If so break out of question re-ask loop
         #
         if answer == "E":
-            if wrong_answers:
-                print("""\n\nQuestions missed:
-    """)
-            for ques in wrong_answers:
-                print(ques)
-            exit(0)
+            break
 
         #
-        #See if we're skipping this question. If we are, break out of
-        #of question asking loop. Note the while-else will NOT be
-        #executed.
+        #See if we're skipping this question. If we are, save question
+        #in skip file.
         #
         if answer == "S":
-            break
+
+            ############################################################
+            ####
+            #### We're marking this question to be skipped in the future
+            ####
+            ############################################################
+
+            print("Correct answer is:")
+            print("    {}. {}".format(new_correct_answer,
+                new_correct_answer_text))
+
+            #
+            #Make sure this question is to be skipped
+            #
+            answer = hamlibIO.get_input(skip_help, """
+Do you wish to skip this question in the future? [(Y), N]: """,
+                default="Y", exit_ok=False)[:1].upper()
+
+            #
+            #If we didn't answer with a "Y", don't skip this question
+            #and ask it again.
+            #
+            if answer != "Y":
+                print("Question {} will remain in the test".format(question_number))
+            else:
+                #
+                #Remove the question from the question pool. First, add
+                #it to the skipped questions dictonary.
+                #
+                questions_to_skip[question_number] = 1
+
+                #
+                #Now write out the dictonary keys (the list of
+                #questions) to the skip file.
+                #
+                #We use a dictonary to easily remove duplicates, just in
+                #case.
+                #
+                try:
+                    f = open(skip_file, "w")
+                    f.write("\n".join(sorted(questions_to_skip)))
+                    f.close()
+
+                except:
+                    print("""
+Warning: Unable to write file "{}"
+         Test will continue, skip question not saved.""".format(skip_file))
+
+            #
+            #Always re-ask the question
+            #
+            print()
+            continue
+
+        ################################################################
+        ####
+        #### We're not exiting and not skipping this question, see if
+        #### it's the right answer. If it's not, save it as a question
+        #### missed (the first time through) and ask it again. Otherwise
+        #### move on to the next question.
+        ####
+        ################################################################
 
         #
         #If we're not adding this question to the skip list, see if the
@@ -413,81 +479,30 @@ don't need to be asked it anymore).
             #wrong.
             #
             #
-            if not saved_wrong_answer:
+            if save_wrong_answer:
                 wrong_answers.append(question + correct_answer_formatted)
-                saved_wrong_answer = True
+                save_wrong_answer = False
             print()
-            print("**** Wrong, correct answer is: ************************************************")
+            print("**** Wrong, correct answer is: " + "*" * 50)
             print(" " * 4 + new_correct_answer_text)
         #
-        #Blank line, then ask next question
+        #Blank line, then ask next question if it was answered
+        #correctly, otherwise re-ask the question.
         #
         print()
 
-    #
-    #If we exited question asking loop, we have a correct answer.
-    #Continue on to ask next question.
-    #
-    else:
-        continue
-
-    ####################################################################
-    ####
-    #### We're marking this question to be skipped in the future
-    ####
-    ####################################################################
-
-    print("Correct answer is:")
-    print("    {}. {}".format(new_correct_answer,
-        new_correct_answer_text))
+        ################################################################
+        ####
+        #### The bottom of the re-ask question loop.
+        ####
+        ################################################################
 
     #
-    #Make sure this question is to be skipped
+    #If the answer was "E" for exit, break out of the question loop and
+    #exit the program.
     #
-    skip_help = """
-Answer "Y" (or just press <Enter>) if you wish to skip this question in
-the future, or "N" (or anything else) if you wish to keep this question
-in the test.
-"""
-    answer = hamlibIO.get_input(skip_help, """
-Do you wish to skip this question in the future? [(Y), N]: """,
-        default="Y", exit_ok=False)[:1].upper()
-
-    #
-    #If we didn't answer with a "Y", don't skip this question.
-    #
-    if answer != "Y":
-        print("Question {} will remain in the test".format(question_number))
-        print()
-        continue
-
-    #
-    #Remove the question from the question pool. First, add it to the
-    #skipped questions dictonary.
-    #
-    questions_to_skip[question_number] = 1
-
-    #
-    #Now write out the dictonary keys (the list of questions) to the
-    #skip file.
-    #
-    #We use a dictonary to easily remove duplicates.
-    #
-    try:
-        f = open(skip_file, "w")
-        f.write("\n".join(sorted(questions_to_skip)))
-        f.close()
-
-    except:
-        print("""
-Warning: Unable to write file "{}"
-         Test will continue, skip question not saved.""".format(skip_file))
-
-    #
-    #Not necessary, but for consistency, continue the loop
-    #
-    print()
-    continue
+    if answer == "E":
+        break
 
     ####################################################################
     ####
@@ -503,14 +518,26 @@ if start_test:
 """.format(start_test))
     exit(1)
 
+if wrong_answers:
+    print("""\n\nQuestions missed:
+""")
+for ques in wrong_answers:
+    print(ques)
 
-print("A total of {} questions, {} skipped".format(count, count - printed))
+print("""
+A total of {} questions, {} skipped""".format(count, count - printed))
 print()
 
 #
 #Exit here. If you wish more details about the count of each element and
 #subelement, comment this exit out.
 #
+#This is used mostly when you're trying to track down a question that
+#was not parsed correctly and therefore not recognized and printed/asked.
+#This will give you a count of each element and subelement  so you can
+#see where the count is wrong.
+#
+
 exit(0)
 
 for index, value in enumerate(element_questions):
