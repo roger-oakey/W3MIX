@@ -53,7 +53,7 @@ test_files = {
 skip_file = os.path.join(this_dir, "skip_questions")
 
 skip_valid_answers = ("A", "B", "C", "D")
-valid_answers = ("A", "B", "C", "D", "E", "S")
+valid_answers = skip_valid_answers + ("E", "M", "S")
 
 #
 #In-loop question help
@@ -394,7 +394,7 @@ while result:
         answer = ""
         while(answer not in valid_answers):
             answer = hamlibIO.get_input(answer_help, """
-Answer [A-D], [S]kip or [E]xit: """, exit_ok=False)[:1].upper()
+Answer [A-D], [E]xit, [M]anual or [S]kip: """, exit_ok=False)[:1].upper()
 
         #
         #See if this is exit. If so break out of question re-ask loop
@@ -481,9 +481,15 @@ Warning: Unable to write file "{}"
             if save_wrong_answer:
                 wrong_answers.append(question + correct_answer_formatted)
                 save_wrong_answer = False
-            print()
-            print("**** Wrong, correct answer is: " + "*" * 50)
-            print(" " * 4 + new_correct_answer_text)
+
+            #
+            #If we have a wrong answer (versus manually adding it to the
+            #wrong list), print out the answer.
+            #
+            if answer != "M":
+                print()
+                print("**** Wrong, correct answer is: " + "*" * 50)
+                print(" " * 4 + new_correct_answer_text)
         #
         #Blank line, then ask next question if it was answered
         #correctly, otherwise re-ask the question.
