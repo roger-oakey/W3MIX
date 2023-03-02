@@ -12,7 +12,7 @@
 #### Global definitions
 ####
 
-pota_rapidlog_version = "00.2022.11.04"
+pota_rapidlog_version = "2023.03.02.00"
 
 ####
 #### Import support modules
@@ -44,6 +44,8 @@ import hamlibIO
 
 re_comment = r'"[\ -\!\#-\~]*("|$)?'
 re_power = r'\d+W'
+re_all = r'ALL'
+re_noall = r'NOALL'
 adif_file_extension = ".adi"
 
 #
@@ -430,7 +432,7 @@ help = """
 Enter one or more operator callsigns (operators "sharing a microphone").
 Callsigns may include the "/" character.
 
-    Examples: "K0RLO", "K0RLO/R1" or "K0RLO W1JU"
+    Examples: "W3MIX", "W3MIX/R1" or "W3MIX K0RLO"
 """
 
 while(True):
@@ -682,12 +684,12 @@ help = """
 Enter the band or frequency. If you enter a frequency, the band will be
 automatically set.
 
-If split operation, enter transmit band first, followed by the receive
+If split operation, enter your transmit band first, followed by the 
 band.
 
     Examples: "20M", "70CM" or "40M 20M"
 
-Or, enter the transmit frequency. If split operation, enter transmit
+Or, enter the transmit frequency. If split operation, enter your transmit
 frequency first, followed by the receive frequency.
 
     Examples: "14.215" or "114.215 14.275"
@@ -717,8 +719,8 @@ Band or frequency: """).upper()
     print("""
 Error: Incorrectly formatted band or frequency. Band should be entered
        as "20M" or "70CM" or frequency should be entered as "14.215".
-       If split bands or frequencies, enter transmit band or frequency
-       first.
+       If split bands or frequencies, enter your transmit band or
+       frequency first.
        Examples:
            Band: "20M", "40M" or for split: "20M 40M".
            Frequency: "14.215", "14.275" or for split: "14.215 14.275"
@@ -847,22 +849,34 @@ At this prompt you can do the following:
         quotes. Additionally, you can temporarily change the frequency
         or band for this one QSO (for example, you jumped to another
         frequency to do a park-to-park). Split frequencies or bands
-        can be specified as well, transmit band or frequency first.
+        can be specified as well, your transmit band or frequency first.
             Examples:
                 Absolute minimum, just the callsign:
-                    W1JU
+                    K0RLO
                 All optional information:
-                    W1JU 59 57 10W "It's Harvey!"
+                    K0RLO 59 57 10W "It's Roger!"
                 Twofer park-to-park and all optional information:
-                    W1JU "Twofer from Harvey" K-1111 K-2222 10W 59 57
+                    K0RLO "Twofer from Roger" K-1111 K-2222 10W 59 57
 
                 Changing frequency or band for one QSO:
-                    W1JU 59 57 K-1111 14.250
-                    W1JU 59 57 K-1111 17M
+                    K0RLO 59 57 K-1111 14.250
+                    K0RLO 59 57 K-1111 17M
 
-        All optional information may be entered in ANY order except when
-        specified (sent and received RST order and transmit
-        frequency/band and receive frequency/band order).
+        All optional information may be entered in ANY order except sent
+        and received RST and in case of split operation, your transmit 
+        requency/band and receive frequency/band - which must be entered
+        in that order.
+
+QSO Examples:
+
+K0RLO
+K0RLO 59 57
+K0RLO 598 577            [CW RST]
+K0RLO 59 57 K-1214       [Park to Park; if multiple parks, list thenm all]
+K0RLO 59 57 K-1214 10W   [Hunter running 10W QRP]
+K0RLO 59 57 14.250       [Temporary change to 14.250 for this hunter]
+K0RLO 59 57 80M          [Temporary change to the 80M band for this hunter]
+K0RLO 59 57 "It's Greg!" [Add a comment]
 """
 
 
@@ -872,6 +886,11 @@ Enter "Y" (or just press <Enter>) if the specified operator has performed an
 Enter "N" if the specified operator is unable to perform an exchange with
     the hunter or they should not receive credit for the contact.
 """
+
+#
+#Default of prompt if multiple operators
+#
+prompt_for_operators = True
 
 while (True):
     #
@@ -894,7 +913,27 @@ while (True):
         "({}:{}:{}) Hunter contact information: ".format(bands[0],
             display_mode, display_power))
 
+    #
+    #Upcase all input into hunter_info
+    #
     hunter_info = original_hunter_info.upper()
+
+    #
+    #Check to see if we're enabling or disabling prompts for multiple
+    #activators
+    #
+    #As a default we ask if each operator should be logged. If you
+    #type "ALL" then all operators will be logged without asking.
+    #
+    logall = re.fullmatch(re_all, hunter_info)
+    nologall = re.fullmatch(re_noall, hunter_info)
+    if logall or nologall:
+        #
+        #We specified "ALL" or "NOALL". Set prompt to be same as nologall
+        #since nologall = True means to prompt for operators.
+        #
+        prompt_for_operators = nologall
+        continue
 
     #
     #See if new band(s) have been specified
@@ -1223,8 +1262,7 @@ Error: More than two override bands specified. Specify one band for
     #Save transmit, and optionally receive band in record. Use
     #override_band if band temporarily overriden for this log entry.
     #
-    for index, band in \
-        enumerate(override_band if override_band else bands):
+    for index, band in enumerate(override_band if override_band else bands):
         QSO_record[band_tags[index]] = band
 
     #
@@ -1237,8 +1275,7 @@ Error: More than two override bands specified. Specify one band for
     #BOTH bands and frequencies, so in that case we'll use the non-empty
     #override_freq list.
     #
-    for index, freq in \
-        enumerate(override_freq if override_band else freqs):
+    for index, freq in enumerate(override_freq if override_band else freqs):
         QSO_record[frequency_tags[index]] = freq
 
     #
@@ -1278,7 +1315,13 @@ Error: More than two override bands specified. Specify one band for
         #This loop will log entries for ALL the operators that are "sharing a
         #microphone".
         #
-        if ((len(operators) > 1) and
+
+        #
+        #See if we're asking if we should prompt for each operator, then
+        #see if we have multiple operators. If not prompting or not
+        #multiple operators, skip the prompt.
+        #
+        if prompt_for_operators and ((len(operators) > 1) and
             not hamlibIO.get_yes_no(op_help, "Log contact for " + operator)):
             #
             #If "N" typed, skip this operator

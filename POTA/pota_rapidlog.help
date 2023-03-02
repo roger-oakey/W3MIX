@@ -30,25 +30,25 @@ About pota_rapidlog:
     generated log can then be used to populate your personal log with more
     complete data.
 
-    pota_rapidlog will run on any system, Windows or Linux, that has Python3
-    installed, but the primary platform which is was designed for are modern
-    Chromebooks on which you can enable Linux. Chromebook installation will be
-    detailed at the end of this help.
+    pota_rapidlog will run on any system, Windows, iOS or Linux, that has
+    Python3 installed, but the primary platform which is was designed for
+    are modern Chromebooks on which you can enable Linux. Chromebook
+    installation will be detailed at the end of this help.
 
 Running pota_rapidlog:
 
 NOTE: At any question prompt you can type "?" and get detailed help for that
       specific question. If you type "HELP" this help will be printed again.
 
-    After installing pota_rapidlog (see end of help) "cd ~/K0RLO" into the
-    K0RLO directory, type "./pota_rapidlog" and the following setup questions
-    will be asked:
+    After cloning the W3MIX Git repository, "cd ~/W3MIX/POTA" into the
+    W3MIX/POTA directory, then type "./pota_rapidlog" and the following
+    setup questions will be asked:
 
     Operator callsign(s):
 
         Enter your operator callsign. If you have muliple operators "sharing a
         microphone" on one radio, you can enter multiple callsigns on one line.
-        Examples: "K0RLO", "K0RLO/mobile" or "K0RLO W1JU"
+        Examples: "W3MIX", "W3MIX/mobile" or "W3MIX K0RLO"
 
     Park code(s):
 
@@ -74,10 +74,10 @@ NOTE: At this point pota_rapidlog can figure out the log file name. It will
       following question will be asked:
 
         POTA log already exists for this callsign and park:
-            "K0RLO_K-1111.adi"
+            "W3MIX_K-1111.adi"
         Last modified on 2022/11/04 08:59:24 (Local).
         Do you wish to archive this as:
-            "K0RLO_K-1111.adi_20221104-085924"
+            "W3MIX_K-1111.adi_20221104-085924"
         and start a new log [(N), y]:
 
       Press <Enter> (default of "NO") if you wish to ADD to the existing log.
@@ -127,27 +127,27 @@ appear as follows:
             and we have yet not specified an optional transmit power. At bare
             minimum all we need to do at this point to log a contact is to
             type in a hunter's callsign.
-            Example: "w1ju"
+            Example: "k0rlo"
 
             But you can do more.
 
             If you and the hunter exchange RST information, you can enter that
             too in the order of your signal report to them, followed by
             optionally what they reported to you.
-            Examples: "w1ju 59" or "w1ju 59 59"
+            Examples: "k0rlo 59" or "k0rlo 59 59"
 
             For park-to-park contacts, enter the park the other activator is
             calling from. If they're simultaneously activating multiple parks,
             just enter ALL the parks they're activating from.
-            Examples: "w1ju k-1111" or "w1ju k-1111 k-2222 k-3333"
+            Examples: "k0rlo k-1111" or "k0rlo k-1111 k-2222 k-3333"
 
             If your hunter is running 5 watts QRP, maybe you'd like to record
             their power.
-            Examples: "w1ju 5w"
+            Examples: "k0rlo 5w"
 
             If you wish to add a comment to the log, simply enclose it in
             double quotes.
-            Examples: 'w1ju "My bud Harvey"'
+            Examples: 'k0rlo "My old callsign"'
 
             Most importantly, after the hunter's callsign (which MUST be
             entered first) ALL the above optional information may be entered
@@ -157,19 +157,19 @@ appear as follows:
             So the following hunter entries are ALL identical and would
             generate identical log entries:
 
-                w1ju 59 58 k-1111 k-2222 5w "My bud Harvey"
-                w1ju k-1111 k-2222 59 58 5w "My bud Harvey"
-                w1ju 5w "My bud Harvey" k-1111 k-2222 59 58
-                w1ju 5w "My bud Harvey" 59 k-1111 58 k-2222
+                k0rlo 59 58 k-1111 k-2222 5w "My old callsign"
+                k0rlo k-1111 k-2222 59 58 5w "My old callsign"
+                k0rlo 5w "My old callsign" k-1111 k-2222 59 58
+                k0rlo 5w "My old callsign" 59 k-1111 58 k-2222
 
             Note: If you wish to change the frequency or band temporarily
             for a single contact (such as you went to another frequency
             for a park-to-park contact) you can enter the band or frequency
             as part of the contact, for example:
 
-                w1ju 14.320
-                w1ju 59 58 14.300
-                w1ju 47 48 17m
+                k0rlo 14.320
+                k0rlo 59 58 14.300
+                k0rlo 47 48 17m
 
             Split operations can be entered as two bands or frequencies
             (transmit, then receive). Like other entries the temporary band
