@@ -1,0 +1,146 @@
+#!/usr/bin/python3
+
+###############################################################################
+###############################################################################
+####
+#### Simple POTA logging program that allows freeform input of contacts
+####
+###############################################################################
+###############################################################################
+
+####
+#### Global definitions
+####
+
+pota_rapidlog_version = "2023.03.02.00"
+
+####
+#### Import support modules
+####
+
+import os
+import re
+import shutil
+import sys
+import time
+
+####
+#### Global defines
+####
+
+path_args_text = "path_args"
+
+#
+#Put parent directory in the system path in order to import hamlibIO.py
+#from the directory above
+#
+this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+parent_dir = os.path.dirname(this_dir)
+sys.path.append(parent_dir)
+
+import hamlibIO
+
+####
+#### Global definitions
+####
+
+default_dir = os.path.join(this_dir, "default")
+callsign_dir = os.path.join(this_dir, "callsigns")
+
+callsign = sys.argv[1].strip().upper()
+
+operator_dir = os.path.join(callsign_dir, callsign)
+startup_list_file = os.path.join(operator_dir, "start_list")
+apps_dir = os.path.join(operator_dir, "apps")
+
+#
+#See if the callsign specified exists in the callsigns directory
+#
+if os.path.exists(operator_dir):
+    #
+    #see if the callsign is a file, not a directory
+    #
+    if os.path.isfile(operator_dir):
+        #
+        #Report error that the callsign direcotry is actually a file
+        #
+        print("""
+Error: "{}" is a file, not a directory.""".format(operator_dir))
+        exit(1)
+else:
+    #
+    #This callsign does not exist, create directory treee and copy default
+    #startup data to callsign
+    #
+    shutil.copytree(default_dir, operator_dir)
+
+#
+#Callsign exists in the callsigns directory
+#
+
+#
+#Read in start_list file if it exists
+#
+try:
+    f = open(startup_list_file, "r")
+    startup_list_text = f.read()
+    f.close()
+except:
+    #
+    #No file fount, report
+    #
+    print("""
+Error: Error reading {} file""".format(satartup_list_file))
+    exit(1)
+
+startup_list = []
+errors = ""
+for app_name in startup_list_text.split('\n'):
+    app_name = app_name.strip()
+
+    #
+    #Skip blank lines
+    #
+    if not app_name:
+        continue
+
+
+    startup_list.append(app_name.strip())
+    app_dir = os.path.join(apps_dir, app_name)
+    if not os.path.isdir(app_dir):
+        errors += """
+Error: App directory "{}" not found.""".format(app_dir)
+    path_args = os.path.join(app_dir, path_args_text)
+    if not os.path.isfile(path_args):
+        errors += """
+Error: "path_args" file "{}" not found.""".format(path_args)
+
+if errors:
+    print(errors)
+    exit(1)
+
+for app_2_start in startup_list:
+    app_dir = os.path.join(apps_dir, app_2_start)
+    path_args = os.path.join(app_dir, path_args_text)
+
+    #
+    #Read in path_args file
+    #
+    try:
+        f = open(path_args, "r")
+        start_path = f.read()
+        f.close()
+    except:
+        #
+        #No file fount, report
+        #
+        print("""
+Error: Error reading {} file""".format(path_args))
+        exit(1)
+
+    invoke_line = start_path.split('\n')[0].strip()
+    print(invoke_line)
+
+    os.system(invoke_line)
+
+exit()
