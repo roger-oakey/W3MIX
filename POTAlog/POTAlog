@@ -1,0 +1,1452 @@
+#!/usr/bin/python3
+
+"""
+Enhancements:
+
+Display frequency instead of band on hunter prompt (if you have it)
+
+Do not allow split frequencies to be different bands (test)
+
+Do not allow splits over different frequencies (only allow input of one band)
+
+Add default comments for activating and for park to park
+"""
+
+###############################################################################
+###############################################################################
+####
+#### Simple POTA logging program that allows freeform input of contacts
+####
+###############################################################################
+###############################################################################
+
+####
+#### Global definitions
+####
+
+potalog_version = "2024.03.31.00"
+
+####
+#### Import support modules
+####
+
+import os
+import re
+import shutil
+import sys
+import time
+
+####
+#### Import large tables and help files to de-clutter the program
+####
+
+#
+#Put parent directory in the system path in order to import hamlibIO.py
+#from the directory above
+#
+this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+parent_dir = os.path.dirname(this_dir)
+sys.path.append(parent_dir)
+
+import hamlibIO
+
+####
+#### Global definitions
+####
+
+re_comment = r'"[\ -\!\#-\~]*("|$)?'
+re_power = r'\d+W'
+re_all = r'ALL'
+re_noall = r'NOALL'
+adif_file_extension = ".adi"
+
+pota_activation_format = "POTA activation: {}"
+pota_park2park_format = "POTA park to park: From {} to {}"
+
+#
+#This is the order that the ADIF tags will be placed into the file for
+#consistency
+#
+
+band_tags = (
+    "BAND",
+    "BAND_RX"
+    )
+
+frequency_tags = (
+    "FREQ",
+    "FREQ_RX"
+    )
+
+power_tags = (
+    "TX_PWR",
+    "RX_PWR"
+    )
+
+rst_tags = (
+    "RST_SENT",
+    "RST_RCVD"
+    )
+
+mode_tags = (
+    "MODE",
+    "SUBMODE"
+    )
+
+pota_countries = {
+    "YA" : "AFGHANISTAN",
+    "ZA" : "ALBANIA",
+    "7X" : "ALGERIA",
+    "AS" : "AMERICAN SAMOA",
+    "C3" : "ANDORRA",
+    "D2" : "ANGOLA",
+    "VP2E" : "ANGUILLA",
+    "CE9" : "ANTARCTICA",
+    "V2" : "ANTIGUA AND BARBUDA",
+    "AR" : "ARGENTINA",
+    "EK" : "ARMENIA",
+    "P4" : "ARUBA",
+    "VK" : "AUSTRALIA",
+    "OE" : "AUSTRIA",
+    "4J" : "AZERBAIJAN",
+    "CU" : "AZORES",
+    "C6" : "BAHAMAS",
+    "A9" : "BAHRAIN",
+    "OCEAN I." : "BANABA I.",
+    "S2" : "BANGLADESH",
+    "8P" : "BARBADOS",
+    "EV" : "BELARUS",
+    "ON" : "BELGIUM",
+    "V3" : "BELIZE",
+    "TY" : "BENIN",
+    "VP9" : "BERMUDA",
+    "A5" : "BHUTAN",
+    "CP" : "BOLIVIA",
+    "T9" : "BOSNIA-HERZEGOVINA",
+    "A2" : "BOTSWANA",
+    "BR" : "BRAZIL",
+    "V85" : "BRUNEI DARUSSALAM",
+    "BG" : "BULGARIA",
+    "XT" : "BURKINA FASO",
+    "9U5" : "BURUNDI",
+    "CV" : "CABRO VERDE",
+    "XU" : "CAMBODIA",
+    "TJ" : "CAMEROON",
+    "VE" : "CANADA",
+    "ZF" : "CAYMAN IS.",
+    "TL" : "CENTRAL AFRICA",
+    "TT" : "CHAD",
+    "CA" : "CHILE",
+    "BY" : "CHINA",
+    "HK" : "COLOMBIA",
+    "D6" : "COMOROS",
+    "CR" : "COSTA RICA",
+    "TU" : "COTE D'IVOIRE",
+    "9A" : "CROATIA",
+    "CO" : "CUBA",
+    "PJ2" : "CURACAO",
+    "5B" : "CYPRUS",
+    "OK" : "CZECH REPUBLIC",
+    "P5" : "DEMOCRATIC PEOPLE'S REP. OF KOREA",
+    "OU" : "DENMARK",
+    "J2" : "DJIBOUTI",
+    "J7" : "DOMINICA",
+    "HI" : "DOMINICAN REPUBLIC",
+    "HC" : "ECUADOR",
+    "SU" : "EGYPT",
+    "YS" : "EL SALVADOR",
+    "GB" : "ENGLAND",
+    "3C" : "EQUATORIAL GUINEA",
+    "E3" : "ERITREA",
+    "ES" : "ESTONIA",
+    "ET" : "ETHIOPIA",
+    "VP8" : "FALKLAND ISLANDS",
+    "OY" : "FAROE ISLANDS",
+    "DA" : "FEDERAL REPUBLIC OF GERMANY",
+    "3D2" : "FIJI",
+    "OH" : "FINLAND",
+    "F" : "FRANCE",
+    "V6" : "FRENCHE STATE OF MICRONESIA",
+    "TR" : "GABON",
+    "4L" : "GEORGIA",
+    "9G1" : "GHANA",
+    "SV" : "GREECE",
+    "OX" : "GREENLAND",
+    "GD" : "GRENADA",
+    "TG" : "GUATEMALA",
+    "GU" : "GUERNSEY",
+    "3X" : "GUINEA",
+    "GW" : "GUINEA-BISSAU",
+    "8R" : "GUYANA",
+    "HH" : "HAITI",
+    "HR" : "HONDURAS",
+    "HA" : "HUNGARY",
+    "TF" : "ICELAND",
+    "VU" : "INDIA",
+    "YB" : "INDONESIA",
+    "EP" : "IRAN",
+    "YI" : "IRAQ",
+    "EI" : "IRELAND",
+    "GD" : "ISLE OF MAN",
+    "4X" : "ISRAEL",
+    "I" : "ITALY",
+    "6Y" : "JAMAICA",
+    "JA" : "JAPAN",
+    "GJ" : "JERSEY",
+    "JY" : "JORDAN",
+    "UL" : "KAZAKHSTAN",
+    "5Z4" : "KENYA",
+    "3DA" : "KINGDOM OF ESWATINI",
+    "T31" : "KIRIBATI",
+    "9K2" : "KUWAIT",
+    "UM" : "KYRGYZSTAN",
+    "XW" : "LAOS",
+    "YL" : "LATVIA",
+    "OD5" : "LEBANON",
+    "7P8" : "LESOTHO",
+    "EL" : "LIBERIA",
+    "5A" : "LIBYA",
+    "HB0" : "LIECHTENSTEIN",
+    "LY" : "LITHUANIA",
+    "LX" : "LUXEMBOURG",
+    "XX9" : "MACAO",
+    "Z3" : "MACEDONIA",
+    "5R" : "MADAGASCAR",
+    "7Q7" : "MALAWI",
+    "9M" : "MALAYSIA",
+    "8Q6" : "MALDIVES",
+    "TZ" : "MALI",
+    "9H" : "MALTA",
+    "MP" : "MARIANA ISLANDS",
+    "V7" : "MARSHALL ISLANDS",
+    "5T" : "MAURITANIA",
+    "3B8" : "MAURITIUS",
+    "XE" : "MEXICO",
+    "UO" : "MOLDOVA",
+    "JT" : "MONGOLIA",
+    "4O" : "MONTENEGRO",
+    "VP2M" : "MONTSERRAT",
+    "CN" : "MOROCCO",
+    "C9" : "MOZAMBIQUE",
+    "XZ2" : "MYANMAR",
+    "V5" : "NAMIBIA",
+    "C2" : "NAURU",
+    "9N" : "NEPAL",
+    "PA" : "NETHERLANDS",
+    "ZL" : "NEW ZEALAND",
+    "YN" : "NICARAGUA",
+    "5U" : "NIGER",
+    "5N" : "NIGERIA",
+    "E6" : "NIUE",
+    "LA" : "NORWAY",
+    "A4" : "OMAN",
+    "AP" : "PAKISTAN",
+    "T8" : "PALAU",
+    "ZC6" : "PALESTINE",
+    "PA" : "PANAMA",
+    "P29" : "PAPUA NEW GUINEA",
+    "PY" : "PARAQUAY",
+    "OA" : "PERU",
+    "DU" : "PHILIPPINES",
+    "SP" : "POLAND",
+    "CT" : "PORTUGAL",
+    "A7" : "QATAR",
+    "Z6" : "REPUBLIC OF KOSOVO",
+    "TN" : "REPUBLIC OF THE CONGO",
+    "YO" : "ROMANIA",
+    "UA" : "RUSSIAN FEDERATION",
+    "9X5" : "RWANDA",
+    "T7" : "SAN MARINO",
+    "S9" : "SAO TOME AND PRINCIPE",
+    "HZ" : "SAUDI ARABIA",
+    "6W" : "SENEGAL",
+    "YT" : "SERBIA",
+    "S79" : "SEYCHELLES",
+    "9L1" : "SIERRA LEONE",
+    "9V" : "SINGAPORE",
+    "OM" : "SLOVAK REPUBLIC",
+    "SIF" : "SLOVENIA",
+    "H44" : "SOLOMON IS.",
+    "T5" : "SOMALIA",
+    "ZR" : "SOUTH AFRICA",
+    "HL" : "SOUTH KOREA",
+    "ST0" : "SOUTH SUDAN [REPUBLIC OF]",
+    "1A0KM" : "SOVEREIGN MILITARY ORDER OF MALTA",
+    "EA" : "SPAIN",
+    "4S7" : "SRI LANKA",
+    "PJ7" : "ST MAARTEN",
+    "V4" : "ST. KITTS AND NEVIS",
+    "J6" : "ST. LUCIA",
+    "J8" : "ST. VINCENT",
+    "ST" : "SUDAN",
+    "PZ" : "SURINAME",
+    "SM" : "SWEDEN",
+    "HB" : "SWITZERLAND",
+    "EY" : "SYRIA",
+    "YK" : "SYRIA",
+    "BV" : "TAIWAN",
+    "5H3" : "TANZANIA",
+    "HS" : "THAILAND",
+    "C5" : "THE GAMBIA",
+    "4W" : "TIMOR-LESTE",
+    "5V" : "TOGO",
+    "A3" : "TONGA",
+    "9Y" : "TRINIDAD AND TOBAGO",
+    "3V8" : "TUNISIA",
+    "TA" : "TURKEY",
+    "EZ" : "TURKMENISTAN",
+    "VP5" : "TURKS AND CAICOS IS.",
+    "T2" : "TUVALU",
+    "5X" : "UGANDA",
+    "UB" : "UKRAINE",
+    "A6" : "UNITED ARAB EMIRATES",
+    "4U1UN" : "UNITED NATIONS HQ",
+    "US" : "UNITED STATES OF AMERICA",
+    "CV" : "URUGUAY",
+    "UI" : "UZBEKISTAN",
+    "YJ8" : "VANUATU",
+    "HV" : "VATICAN",
+    "YV" : "VENEZUELA",
+    "VN" : "VIET NAM",
+    "S0" : "WESTERN SAHARA",
+    "7O" : "YEMEN",
+    "9J2" : "ZAMBIA",
+    "Z2" : "ZIMBABWE",
+    }
+
+####
+#### Subroutines
+####
+
+def determine_filename(callsign, park, state):
+    """
+    Generate full filename based on the callsign, park date and time and
+    optional identification. Replace "/" in callsigns with "-"
+
+    Arguments:
+        callsign:   String containing operator callsign. May include "/".
+        park:       String containing operator park ID
+        state:      Optional state identification
+
+    Returns:
+        CallSign_Park[_state].adi
+    """
+
+    if state:
+        state = "_" + state
+    return(callsign.replace("/", "-") + "_" + park + state + adif_file_extension)
+
+def valid_power(power):
+    """
+    See if valid power specified. If so, return it. If not, return False
+
+    Arguments:
+        power:   String containing power to be verified
+
+    Returns:
+        Power string if correct
+        False if power string incorrectly formatted
+    """
+
+    hamlibIO.validate_arg_type((
+        (power, str),
+    ))
+
+    #
+    #If it's a power, return it.
+    #
+    if re.fullmatch(re_power, power):
+        #
+        #Pack it into a tuple to differentiate it from an error string and
+        #remove the "W" from the end.
+        #
+        return((power[:-1],))
+
+    return("""
+    "{}" is not a valid power syntax. It should be a number followed
+       by a "W".
+       Example: "100W" or "5W".
+""".format(power))
+
+def valid_park(park):
+    """
+    See if valid power specified. If so, return it. If not, return False
+
+    Arguments:
+        power:   String containing power to be verified
+
+    Returns:
+        Power string if correct
+        False if power string incorrectly formatted
+    """
+
+    hamlibIO.validate_arg_type((
+        (park, str),
+    ))
+
+
+    #
+    #Upcase park
+    #
+    park = park.upper()
+    #
+    #See if park format correct
+    #
+    park_parts = re.findall(r'^\s*(.+?)\s*-\d{4,5}\s*$', park)
+    if park_parts:
+        if park_parts[0] not in pota_countries:
+            country_list = ""
+            country_order = {v: k for k, v in pota_countries.items()}
+            for key, value in sorted(country_order.items()):
+                country_list += '       "{}" ({})\n'.format(value, key)
+            return("""
+Error: "{}" is not a valid POTA country. Must be one of:
+{}""".format(park_parts[0], country_list))
+
+    else:
+        #
+        #If a park identifier has a bad format, report it
+        #
+        return("""
+Error: "{}" is not a valid format for a park.
+   It must be one or more letters, followed by a dash and then four digits.
+   Examples: "US-1211" or "VE-5678".
+""".format(park))
+
+    return("")
+
+###############################################################################
+###############################################################################
+####
+#### Start of main program
+####
+###############################################################################
+###############################################################################
+
+#
+#Tell the user how to get help
+#
+print("""
+Type "?" at any time to get help on the specific question being asked.
+Type "HELP" at any time to get the complete documentation for POTAlog.
+""")
+
+####
+#### Ask what operator(s) are sharing this microphone
+####
+
+#
+#Multiple operators may be specified if you're working with more than
+#one operator at a radio. When a contact is made, it is possible to
+#exclude an operator in case they're not available for that particular
+#contact.
+#
+
+help = """
+Enter one or more operator callsigns (operators "sharing a microphone").
+Callsigns may include the "/" character.
+
+    Examples: "W3MIX", "W3MIX/R1" or "W3MIX K0RLO"
+"""
+
+while(True):
+    operators = hamlibIO.get_input(help,
+        """
+Operator callsign(s): """).upper()
+    #
+    #Validate callsign format of all operators supplied
+    #
+    bad_callsign = False
+    ops = {}
+    for operator in re.split(hamlibIO.default_split, operators):
+        #
+        #Upcase and save operator in dictonary to eliminate duplicates
+        #
+        ops[operator] = True
+        #
+        #Validate callsign
+        #
+        report_error = hamlibIO.valid_callsign(operator)
+        if report_error:
+            print(report_error)
+            bad_callsign = True
+
+    #
+    #If a bad callsign format was detected, ask the callsign question
+    #again
+    #
+    if not bad_callsign:
+        break
+
+
+#
+#Save unique operators
+#
+operators = sorted(ops)
+
+####
+#### Ask what park(s) are being activated
+####
+
+#
+#Multiple parks may be specified so if you're in a park next to a national
+#scenic trail, for example, you can log both at once.
+#
+help = """
+Enter one or more park codes. Multiple park codes are when you're
+activating multiple parks from one location.
+
+    Examples: "VE-1211" or "US-1211 US-1214"
+"""
+
+while(True):
+    parks = hamlibIO.get_input(help,
+        """
+Park code(s): """).upper()
+
+    #
+    #Validate park format
+    #
+    bad_park = False
+    pks = {}
+    errors = ""
+    for park in re.split(hamlibIO.default_split, parks):
+        errors += valid_park(park)
+        if errors:
+            bad_park = True
+            continue
+        #
+        #Save park in dictonary to eliminate duplicates
+        #
+        pks[park.upper()] = True
+
+    #
+    #If a bad park format was detected, ask the park question again
+    #
+    if not errors:
+        break
+
+    print(errors)
+
+#
+#Save unique parks
+#
+parks = sorted(pks)
+
+####
+#### Ask for state
+####
+
+help = """
+Type <Enter> if no state is to be specified or enter country and state
+identifier.
+
+Note: US states and territories are verified, everything else is
+accepted as-is.
+
+    Examples: "US-CO" or "US-MP"
+"""
+
+while(True):
+    #
+    #Get optional state information that will be added at end of filename
+    #
+    state = hamlibIO.get_input(help,
+        """
+State/province/etc. of activation if park spans states [None specified]: """,
+        default="").upper()
+
+    #
+    #If no state, get out of loop
+    #
+    if not state:
+        break
+
+    #
+    #See if this is a known country and if so, check its state or province to
+    #assure it's valid.
+    #
+    state_split = re.split(r'[\s-]+', state)
+    if state_split[0] in hamlibIO.state_enumeration:
+        if len(state_split) != 2:
+            print("""
+Error: You must specify a country-state or country-province for an activation.
+""")
+            continue
+
+        #
+        #Make it easier to handle the two
+        #
+        (country, state) = state_split
+        #
+        #See if this state or province is valid within this country
+        #
+        if state in hamlib.state_enumeration[country]:
+            #
+            #Reassemble country and state and use it for logging
+            #
+            state = country + "-" + state
+            break
+
+        print("""          
+Error: "{}" is not a valid state or province for within country "{}"
+""".format(state_split[1], state_split[0]))
+        continue
+
+    #
+    #If we can't validate it, just accept whatever the person types
+    #
+    break
+
+####
+#### Ask if this activation has a special event callsign
+####
+
+#
+#Note: only one callsign allowed for a special event.
+#
+help = """
+Type <Enter> if this is not a special event or enter the special event
+callsign.
+
+    Examples: "W4W" or "W3MX"
+"""
+
+while(True):
+    special_event_callsign = hamlibIO.get_input(help,
+        """
+Special event callsign [NONE]: """, default="").upper()
+
+    #
+    #If nothing entered, leave special_event_callsign blank
+    #
+    if not special_event_callsign:
+        break
+
+    #
+    #Validate callsign of special event
+    #
+    report_error = hamlibIO.valid_callsign(special_event_callsign, slash=False)
+    if report_error:
+        #
+        #If invalid, report
+        #
+        print(report_error)
+    else:
+        break
+
+####
+#### See if this is a continuation of an existing log or if a new log should
+#### be started.
+####
+
+#
+#Determine filename(s) based on special event or not
+#
+if special_event_callsign:
+    callsigns = [special_event_callsign]
+else:
+    callsigns = operators
+
+help = """
+Enter "N" (or just press <Enter>) if you wish to continue to log hunter
+contacts in the existing file.
+
+Enter "Y" if you wish to archive the existing log file (with the last
+modified date included in the extension) and start a new log file.
+"""
+
+for operator in callsigns:
+    for park in parks:
+        filename = determine_filename(operator, park, state)
+        #
+        #If a log file by this name does not currently exist, keep looking
+        #
+        if not os.path.exists(filename):
+            continue
+
+        #
+        #Get last modified time for this file and prompt if it should be archived
+        #
+        mtime = time.localtime(os.path.getmtime(filename))
+        new_filename = filename + time.strftime("_%Y%m%d-%H%M%S", mtime)
+        prompt = """
+POTA log already exists for this callsign and park:
+    "{}"
+Last modified on {} (Local).
+Do you wish to archive this as:
+    "{}"
+and start a new log""".format(filename,
+            time.strftime("%Y/%m/%d %H:%M:%S", mtime), new_filename)
+
+        #
+        #New log file to start, rename the old file
+        #
+        if hamlibIO.get_yes_no(help, prompt, "N"):
+            print("""
+Renaming existing log file "{}"
+to "{}"
+""".format(filename, new_filename))
+            os.rename(filename, new_filename)
+
+
+####
+#### Get the operating frequency or band
+####
+
+help = """
+Enter the band or frequency. If you enter a frequency, the band will be
+automatically set.
+
+If split operation, enter your transmit band first, followed by the 
+band.
+
+    Examples: "20M", "70CM" or "40M 20M"
+
+Or, enter the transmit frequency. If split operation, enter your transmit
+frequency first, followed by the receive frequency.
+
+    Examples: "14.215" or "114.215 14.275"
+"""
+
+while(True):
+    freq = hamlibIO.get_input(help, """
+Band or frequency: """).upper()
+
+    #
+    #Validate band or frequency
+    #
+    test = hamlibIO.valid_band(freq)
+    if not isinstance(test, str):
+        bands = test
+        freqs = []
+        break
+
+    test = hamlibIO.valid_frequency(freq)
+    if not isinstance(test, str):
+        (bands, freqs) = test
+        break
+
+    #
+    #Report error and ask again
+    #
+    print("""
+Error: Incorrectly formatted band or frequency. Band should be entered
+       as "20M" or "70CM" or frequency should be entered as "14.215".
+       If split bands or frequencies, enter your transmit band or
+       frequency first.
+       Examples:
+           Band: "20M", "40M" or for split: "20M 40M".
+           Frequency: "14.215", "14.275" or for split: "14.215 14.275"
+""")
+
+####
+#### Get the operating mode
+####
+
+help = """
+Enter the QSO mode and, if desired, the submode. Note that you can
+specify JUST the submode and the mode will be determined.
+
+    Examples: "CW", "SSB", "SSB USB", "LSB" or "OLIVIA 4/125"
+"""
+
+while(True):
+    mode = hamlibIO.get_input(help, """
+Operating mode: """).upper()
+
+    #
+    #Validate mode
+    #
+    test = hamlibIO.valid_mode(mode)
+    if not isinstance(test, str):
+        mode_submode = test
+        break
+
+    #
+    #Report error and ask again
+    #
+    print(test)
+
+####
+#### See if manual time entry by asking for date
+####
+
+help = """
+For manual time enty, enter the date in the format YYYYMMDD. This will
+REQUIRE a time to be entered for every log entry. For automatic
+timestamping of log entries, just press <Enter>.
+
+    Example: 20221103
+"""
+
+while(True):
+    manual_date = hamlibIO.get_input(help, """
+Enter date (YYYYMMDD) for manual time entry,
+    Press <Enter> for automatic time entry: """,
+        default="").upper()
+
+    #
+    #If nothing typed, leave manual_dt as ""
+    #
+    if not manual_date:
+        break
+
+    #
+    #Validate mode
+    #
+    test = hamlibIO.Date(manual_date)
+    if not test:
+        break
+
+    #
+    #Report error and ask again
+    #
+    print("Error: Date error" + test)
+
+#
+#Put a space before the first log entry
+#
+print("")
+
+#
+#Do not report power unless specified
+#
+power = ["0","0"]
+
+#### Now log the hunters
+####
+#### At minimum you just need the callsign. The callsign must be
+#### specified first.
+####
+#### Optionally you can supply one or more parks identifiers, RST (hunter's RST
+#### followed by operator's RST) and the hunter's power output.
+####
+#### These fields can be intermingled - they'll be sorted out.
+####
+#### In addition, you can switch bands, frequencies, modes or transmit power
+#### by just typing a band, mode, frequency or power alone on a line.
+####
+
+
+log_help = """
+At this prompt you can do the following:
+    Specify a new mode and optionally a submode.
+        Examples:
+            SSB
+            USB
+            SSB LSB
+
+    Specify a new band or transmit AND receive band. If you specify a
+    band, no frequency will be recorded.
+        Examples:
+            20M
+            20M 40M
+
+    Specify a new frequency or transmit AND receive frequency. If you
+    specify the frequency, the band will be automatically be determined
+    and recorded in the log.
+        Examples:
+            14.215
+            14.215 14.250
+
+    Specify a new transmit power. Enter "0W" to stop recording a
+    transmit power.
+        Examples:
+            10W
+            1500W
+
+    Enter a QSO:
+        Enter the hunter's callsign, followed by optional information in
+        any order like sent and received RSTs, hunter transmit power,
+        park to park identifier(s) and a comment enclosed in double
+        quotes. Additionally, you can temporarily change the frequency
+        or band for this one QSO (for example, you jumped to another
+        frequency to do a park-to-park). Split frequencies or bands
+        can be specified as well, your transmit band or frequency first.
+            Examples:
+                Absolute minimum, just the callsign:
+                    K0RLO
+                All optional information:
+                    K0RLO 59 57 10W "It's Roger!"
+                Twofer park-to-park and all optional information:
+                    K0RLO "Twofer from Roger" US-1111 US-2222 10W 59 57
+
+                Changing frequency or band for one QSO:
+                    K0RLO 59 57 US-1111 14.250
+                    K0RLO 59 57 US-1111 17M
+
+        All optional information may be entered in ANY order except sent
+        and received RST and in case of split operation, your transmit 
+        requency/band and receive frequency/band - which must be entered
+        in that order.
+
+QSO Examples:
+
+K0RLO
+K0RLO 59 57
+K0RLO 598 577            [CW RST]
+K0RLO 59 57 US-1214       [Park to Park; if multiple parks, list thenm all]
+K0RLO 59 57 US-1214 10W   [Hunter running 10W QRP]
+K0RLO 59 57 14.250       [Temporary change to 14.250 for this hunter]
+K0RLO 59 57 80M          [Temporary change to the 80M band for this hunter]
+K0RLO 59 57 "It's Greg!" [Add a comment]
+"""
+
+
+op_help = """
+Enter "Y" (or just press <Enter>) if the specified operator has performed an
+    exchange with the hunter and they wish to receive credit for the contact.
+Enter "N" if the specified operator is unable to perform an exchange with
+    the hunter or they should not receive credit for the contact.
+"""
+
+#
+#Default of prompt if multiple operators
+#
+prompt_for_operators = True
+
+while (True):
+    #
+    #See if power is being reported
+    #
+    display_power = (power[0] + "W") if power[0] != "0" else "nopwr"
+
+    #
+    #If we just have a mode (len == 1), display that ([0]]. If we have a
+    #mode AND submode (len = 2), display the submode ([1]).
+    #
+    #...which happens to be the len - 1.
+    #
+    display_mode = mode_submode[len(mode_submode) - 1]
+
+    #
+    #Get hunter information
+    #
+    original_hunter_info = hamlibIO.get_input(log_help, 
+        "({}:{}:{}) Hunter contact information: ".format(bands[0],
+            display_mode, display_power))
+
+    #
+    #Upcase all input into hunter_info
+    #
+    hunter_info = original_hunter_info.upper()
+
+    #
+    #Check to see if we're enabling or disabling prompts for multiple
+    #activators
+    #
+    #As a default we ask if each operator should be logged. If you
+    #type "ALL" then all operators will be logged without asking.
+    #
+    logall = re.fullmatch(re_all, hunter_info)
+    nologall = re.fullmatch(re_noall, hunter_info)
+    if logall or nologall:
+        #
+        #We specified "ALL" or "NOALL". Set prompt to be same as nologall
+        #since nologall = True means to prompt for operators.
+        #
+        prompt_for_operators = nologall
+        continue
+
+    #
+    #See if new band(s) have been specified
+    #
+    test = hamlibIO.valid_band(hunter_info)
+    if not isinstance(test, str):
+        #
+        #Save both band and don't report frequencies
+        #
+        bands = test
+        freqs = []
+        continue
+
+    #
+    #See if new frequency (-ies) have been specified
+    #
+    test = hamlibIO.valid_frequency(hunter_info)
+    if not isinstance(test, str):
+        #
+        #Save both band(s) and frequencies
+        #
+        (bands, freqs) = test
+        continue
+
+    #
+    #See if a new mode has been specified
+    #
+    test = hamlibIO.valid_mode(hunter_info)
+    if not isinstance(test, str):
+        mode_submode = test
+        continue
+
+    #
+    #See if a new power has been specified
+    #
+    test = valid_power(hunter_info)
+    if not isinstance(test, str):
+        #
+        #Save new power. Setting power to "0" will cause no power to be
+        #reported.
+        #
+        #Unpack tuple into activator power [0]
+        #
+        (power[0],) = test
+        continue
+
+    ####
+    #### Looks like we have a contact to log, log it
+    ####
+
+    #
+    #Default to no comment
+    #
+    comment = ""
+
+    #
+    #See if a comment has been specified
+    #
+    quotes = original_hunter_info.count('"')
+    if quotes:
+        #
+        #There is a comment to be logged. Handle one or two quotes
+        #
+        if quotes > 2:
+            #
+            #More than two double quotes, that's an error
+            #
+            print("""
+Error: More than two double quotes '"' detected. A comment must have two double
+       quotes surrounding it, or start with a single double quote if at the end
+       of the line.
+""")
+            continue
+
+        #
+        #Pull out comment from opening quote to closing quote or EOL (re $)
+        #
+        comment = re.search(re_comment, original_hunter_info)[0][1:]
+        hunter_info = re.sub(re_comment, " ", hunter_info).strip()
+
+        #
+        #Remove closing quote if necessary
+        #
+        if quotes > 1:
+            comment = comment[0:-1].strip()
+
+    #
+    #Get the current GMT now so all logs for this hunter show
+    #the same time.
+    #
+    utc = time.gmtime()
+
+    #
+    #Split input line to see if this is just a hunter (only character
+    #string) or RST reports and/or a park-to-park which will specify
+    #the park as following character strings.
+    #
+    hunter_info = re.split(hamlibIO.default_split, hunter_info)
+
+    #
+    #Get the hunter callsign which is the first (and perhaps
+    #only) contents of the list. Parks and RSTs (if any) remain.
+    #
+    hunter_callsign = hunter_info.pop(0)
+
+    #
+    #Start off with checking if it's a bad callsign
+    #
+    report_error = hamlibIO.valid_callsign(hunter_callsign)
+    if report_error:
+        print(report_error)
+
+    #
+    #Initialize bad_entry based upon the validation of the callsign
+    #
+    bad_entry = bool(report_error)
+
+    #
+    #Split the remainder of the info into RST reports and parks, if any
+    #
+    manual_time = ""
+    hunter_parks = []
+    hunter_power = []
+    rst = []
+    bad_strings = []
+    override_freq = []
+    override_band = []
+
+    #
+    #Look through the free-float format and save optional park, RST and power,
+    #if any. Report anything that doesn't match as an error.
+    #
+    for component in hunter_info:
+        #
+        #If it's a park, save it as a park
+        #
+        if not valid_park(component):
+            #
+            #See if this park already specified
+            #
+            if component in hunter_parks:
+                print("""
+Error: Park "{}" specified more than once. Park number typo?
+""".format(component))
+                bad_entry = True
+            else:
+                hunter_parks.append(component)
+            continue
+        #
+        #If it's an RST, save it as an RST
+        #
+        if re.fullmatch(r'[1-5][1-9]{1,2}', component):
+            #
+            #It's an RST number, save it as an RST
+            #
+            rst.append(component)
+            continue
+        #
+        #If it's a power, save it as a power
+        #
+        test = valid_power(component)
+        if not isinstance(test, str):
+            #
+            #It's an hunter power, returned as the first element of a
+            #tuple, save the power as returned (no "W" at end)
+            #
+            hunter_power.append(test[0])
+            continue
+
+        #
+        #See if this is a valid time
+        #
+        if not hamlibIO.Time(component):
+                #
+                #Valid manual time, save it
+                #
+                manual_time = component
+                continue
+
+        #
+        #See if we're temporarily overriding the frequency
+        #
+        if not isinstance(hamlibIO.valid_frequency(component), str):
+            override_freq.append(component)
+            continue
+
+        #
+        #See if we're temporarily overriding the band
+        #
+        if not isinstance(hamlibIO.valid_band(component), str):
+            override_band.append(component)
+            continue
+
+        #
+        #Unrecognized string, save error
+        #
+        print("""
+Error: "{}" is not a recognized entry. Press <Enter> to get help on how to
+       enter information on the hunter contact information line.
+""".format(component))
+        bad_entry = True
+
+    #
+    #See if we have a manual date without a manual time, or a manual
+    #time without a manual date
+    #
+    if manual_date:
+        if not manual_time:
+            print("""
+Error: Manual date specified but no manual time. Program was started with
+       a manual date, which means all log entries must have a manual time
+       specified.
+""")
+            bad_entry = True
+    elif manual_time:
+        print("""
+Error: Manual time specified but no manual date. Restart program and enter
+       a manual date if you wish to specify time.
+""")
+        bad_entry = True
+
+    #
+    #Verify we have no more than one power entry.
+    #
+    if hunter_power:
+        if len(hunter_power) > 1:
+            print("""
+Error: More than one power entry. The hunter can only have one power entered.
+""")
+            bad_entry = True
+        #
+        #Save hunter (receive) power.
+        #
+        power[1] = hunter_power[0]
+    else:
+        #
+        #Do not report any hunter power
+        #
+        power[1] = "0"
+
+    #
+    #Verify we have no more than 2 RST entries
+    #
+    if len(rst) > 2:
+        print("""
+Error: More than two RST entries. The RST report you send to the hunter is the
+       first RST report, the second RST is what the hunter reports to you.
+       Examples: "59", "589" or "59 59".
+""")
+        #
+        #Ask for all the info again
+        #
+        bad_entry = True
+
+    #
+    #Assure we're not overriding BOTH the frequency and band
+    #
+    if override_freq and override_band:
+        print("""
+Error: Cannot override BOTH frequency and band. Specify one or the other.
+""")
+        bad_entry = True
+
+    #
+    #Make sure we didn't specify more than two override frequencies
+    #(support split operation)
+    #
+    if len(override_freq) > 2:
+        print("""
+Error: More than two override frequencies specified. Specify one
+       frequency for simplex operation, two for splitband.
+""")
+        bad_entry = True
+
+    #
+    #Make sure we didn't specify more than two override bands (support
+    #split operation)
+    #
+    if len(override_band) > 2:
+        print("""
+Error: More than two override bands specified. Specify one band for
+       simplex operation, two for splitband.
+""")
+        bad_entry = True
+
+    #
+    #If we got any bad information, skip processing and ask for
+    #hunter callsign, RST and park(s) again.
+    #
+    if bad_entry:
+        continue
+
+    ####
+    #### Input error checking complete.
+    ####
+    #### Assemble the QSO to be logged, start with the stuff common to
+    #### all the record(s) to be written. Initialize the ADIF record to
+    #### only contain MY_SIG = POTA
+    ####
+
+    #
+    #If overriding frequency or band, format into lists
+    #
+    if override_freq:
+        (override_band, override_freq) = \
+            hamlibIO.valid_frequency(" ".join(override_freq))
+    elif override_band:
+        override_band = hamlibIO.valid_band(" ".join(override_band))
+
+    QSO_record = {"MY_SIG":"POTA"}
+
+    #
+    #Save the date, time and hunter callsign
+    #
+    QSO_record["QSO_DATE"] = manual_date if manual_date else time.strftime("%Y%m%d", utc)
+    QSO_record["TIME_ON"] = manual_time if manual_time else time.strftime("%H%M%S", utc)
+    QSO_record["CALL"] = hunter_callsign
+
+    #
+    #Save mode and submode
+    #
+    for index, mode in enumerate(mode_submode):
+        QSO_record[mode_tags[index]] = mode
+
+    #
+    #Save transmit, and optionally receive band in record. Use
+    #override_band if band temporarily overriden for this log entry.
+    #
+    for index, band in enumerate(override_band if override_band else bands):
+        QSO_record[band_tags[index]] = band
+
+    #
+    #Save transmit, and optionally receive frequencies in record.  Use
+    #override_freq if frequency temporarily overriden for this log entry.
+    #
+    #Tricky code here. Note the test for override_band. If JUST the band
+    #was overiddden, override_freq is an empty list so we won't store
+    #frequencies, which is correct. If we overrided frequencies, we have
+    #BOTH bands and frequencies, so in that case we'll use the non-empty
+    #override_freq list.
+    #
+    for index, freq in enumerate(override_freq if override_band else freqs):
+        QSO_record[frequency_tags[index]] = freq
+
+    #
+    #Save optional transmit and receive power in record
+    #
+    for index, pwr in enumerate(power):
+        if pwr != "0":
+            #
+            #If there is a power specified, report it
+            #
+            QSO_record[power_tags[index]] = pwr
+
+    #
+    #Save sent and received RST, if specified
+    #
+    for index, rst_info in enumerate(rst):
+        QSO_record[rst_tags[index]] = rst_info
+
+    #
+    #Save state if specified
+    #
+    if state:
+        QSO_record["MY_STATE"] = state
+
+    #
+    #Save comment if specified
+    #
+    if comment:
+        QSO_record["COMMENT"] = comment
+    else:
+        #
+        #No comment so supply a default comment
+        #
+        if hunter_parks:
+            #
+            #This is a park-to-park, supply default park-to-park comment
+            #
+            QSO_record["COMMENT"] = pota_park2park_format.format(
+                ", ".join(parks),
+                ", ".join(sorted(hunter_parks))
+                )
+        else:
+            #
+            #Not a park-to-park, supply normal activation comment
+            #
+            QSO_record["COMMENT"] = pota_activation_format.format(
+                ", ".join(parks),
+                )
+
+    #
+    #Log contacts for all operators (any input will skip an
+    #operator from having a log entry)
+    #
+    for operator in operators:
+        #
+        #This loop will log entries for ALL the operators that are "sharing a
+        #microphone".
+        #
+
+        #
+        #See if we're asking if we should prompt for each operator, then
+        #see if we have multiple operators. If not prompting or not
+        #multiple operators, skip the prompt.
+        #
+        if prompt_for_operators and ((len(operators) > 1) and
+            not hamlibIO.get_yes_no(op_help, "Log contact for " + operator)):
+            #
+            #If "N" typed, skip this operator
+            #
+            continue
+
+        #
+        #Now write a file for each park we're at
+        #
+        for park in parks:
+            #
+            #Log the operator
+            #
+            QSO_record["OPERATOR"] = operator
+
+            #
+            #Determine STATION_CALLSIGN and logfile name based on if
+            #there's a special_event_callsign or not.
+            #
+            if special_event_callsign:
+                QSO_record["STATION_CALLSIGN"] = special_event_callsign
+            else:
+                QSO_record["STATION_CALLSIGN"] = operator
+
+            #
+            #Filename is always based on the STATION_CALLSIGN
+            #
+            log_filename = determine_filename(QSO_record["STATION_CALLSIGN"],
+                park, state)
+
+            #
+            #We wait until we REALLY need to create a log file. Time to
+            #see if we need to create the file now, and if so, write the
+            #header.
+            #
+            if not os.path.exists(log_filename):
+                #
+                #If this log file does not yet exist, create a header
+                #
+                #Create the header before opening the file in case an
+                #error is detected in the header, which will casue an
+                #exception and abort.
+                #
+                #Only need to specify the program version, ADIF_header
+                #will fill in all the other required header fields.
+                #
+                header = hamlibIO.ADIF_header(\
+                    {"PROGRAMVERSION":potalog_version})
+
+                f = open(log_filename, "w")
+                f.write(header)
+                f.close()
+
+            #
+            #Add this park to the record to be written
+            #
+            QSO_record["MY_SIG_INFO"] = park
+
+            if hunter_parks:
+                #
+                #We're writing Park to park information, so setup the SIG
+                #
+                QSO_record["SIG"] = "POTA"
+
+                #
+                #Now create the records for all park to parks
+                #
+                QSO = ""
+                for hunter_park in sorted(hunter_parks):
+                    #
+                    #Since this is a park to park, fill in the additonal
+                    #information
+                    #
+                    QSO_record["SIG_INFO"] = hunter_park
+
+                    #
+                    #Create multiple QSOs, one for each park.
+                    #
+                    QSO += hamlibIO.ADIF_record(QSO_record)
+            else:
+                #
+                #No park to park, create the record for this normal
+                #hunter contact
+                #
+                QSO = hamlibIO.ADIF_record(QSO_record)
+
+            #
+            #Open, write and close the ADIF file to minimize the
+            #possibility of corruption if interrupted.
+            #
+            f = open(log_filename, "a")
+            f.write(QSO)
+            f.close()
+
+exit()
