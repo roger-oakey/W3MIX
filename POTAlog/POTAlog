@@ -9,7 +9,9 @@ Do not allow split frequencies to be different bands (test)
 
 Do not allow splits over different frequencies (only allow input of one band)
 
-Add default comments for activating and for park to park
+Check callsign, mode and band for duplicate entries and display how long ago
+in minutes it was if a duplicate contact is discovered. Prompt is the contact
+shold be logged (default: No).
 """
 
 ###############################################################################
