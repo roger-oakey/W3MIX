@@ -20,7 +20,7 @@ shold be logged (default: No).
 #### Global definitions
 ####
 
-potalog_version = "2024.03.31.00"
+potalog_version = "2024.04.01.00"
 
 ####
 #### Import support modules
@@ -417,6 +417,12 @@ Error: "{}" is not a valid format for a park.
 ####
 ###############################################################################
 ###############################################################################
+
+#
+#Report POTAlog version
+#
+print("""
+POTAlog version: {}""".format(potalog_version))
 
 #
 #Tell the user how to get help

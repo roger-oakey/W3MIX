@@ -35,9 +35,11 @@ Installing POTAlog:
 
             Settings->Advanced->Developers
 
-        Your Chromebook is probably too old to support Linux.
+        Your Chromebook is probably too old to support Linux, and POTAlog is not
+        supported on such platforms.
 
-        Now follow the "All Linux platforms" instructions, below.
+        Otherwise start the Linux machine and then follow the "All Linux
+        platforms" instructions, below.
 
     Apple:
 
@@ -47,8 +49,8 @@ Installing POTAlog:
 
         There are too many different distributions of Linux around to document
         the setup process for them all. Just make sure both Git and Python3 are
-        installed on your version of Linux, and then follow the "All platforms"
-        instructions, below, for running POTAlog.
+        installed on your version of Linux, and then follow the "All Linux
+        platforms" instructions, below, for running POTAlog.
 
     All Linux platforms:
 
@@ -69,9 +71,11 @@ Installing POTAlog:
         ...and POTAlog will start running and your ADIF (.adi) log files will be
         created in your home directory.
 
-        From time to time to assure that you have the latest and greatest
-        version of POTAlog, type the following two commands:
+    Keeping POTAlog current, ALL PLATFORMS:
 
-            cd ~/W3MIX
+        From time to time to assure that you have the latest and greatest
+        version of POTAlog, change directory into the W3MIX directory and issue
+        the following command:
+
             git pull
 

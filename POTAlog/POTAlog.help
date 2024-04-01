@@ -1,16 +1,15 @@
 ********************************************************************************
 
-Note: Installation instructions are found in W3MIX/POTAlog_install.txt
-
 POTAlog
 
 About POTAlog:
 
-    POTAlog is a simple program that creates an ADI file for POTA
-    reporting. By avoiding a GUI (Graphical User Interface), POTAlog allows
-    fast, simple QWERTY data entry without having to click and select fields to
-    create a log entry. This allows the user to stay "heads down" on the radio
-    and not have to pay attention to the screen to select logging fields.
+    POTAlog is a simple program that creates ADI file(s) for POTA reporting. By
+    avoiding a GUI (Graphical User Interface), POTAlog allows fast, simple text-
+    only data entry without having to click and select fields to create a log
+    entry. This allows the user to stay "heads down" on the radio and not have
+    to pay attention to the screen, which is required in order to to select
+    logging fields in a GUI.
 
     POTAlog requires minimal input by remembering "sticky" information like the
     frequency, operating mode and transmit power. These "sticky" values will be
@@ -23,7 +22,7 @@ About POTAlog:
 
     POTAlog supports freeform input. At the very minimum all you need to
     enter is a hunter's callsign and all the information required for POTA
-    reporting will be logged. Many people, however wish to have a more complete
+    reporting will be logged. Many people, however, wish to have a more complete
     record of contacts in their own log, so in addition to just the hunter's
     callsign, POTAlog allows some additional, optional information to be logged
     such as the sent and received RST, the hunter's transmit power and the
@@ -74,7 +73,7 @@ POTAlog startup questions:
     State/province/etc. of activation if park spans states [None specified]:
 
         This assists the POTA software in identifying what state you're located
-        in if a park or trail crosses multiple states. Typically this isn't the
+        in if a park or trail crosses multiple states. Typically, this isn't the
         case and you can just press <Enter> to leave this field blank.
 
     Special event callsign [NONE]:
@@ -96,8 +95,9 @@ POTAlog startup questions:
         contact.
 
     Add POTA-identifying comments to all log entries [(Y), n]: ?
+
         Press <Enter> or "Y" to add POTA-unique comments to all logged QSOs
-        (unless they're overridden with QSO-specific coments, when logged).
+        (unless they're overridden with QSO-specific comments, when logged).
         These comments are not used by POTA but are helpful when they appear in
         your own, private logs to identify your POTA activations and "Park to
         Park" contacts. Answering "N" will suppress POTA comments.
@@ -126,8 +126,8 @@ appear as follows:
 
     (20M:USB:nopwr) Hunter contact information:
 
-Note that you may want to enter your power transmitting power. If so enter your
-power with a "w" after it like: "100w". Now the prompt will appear as:
+Note that you may want to enter your transmitting power. If so, enter your power
+with a "w" after it like: "100w". Now the prompt will appear as:
 
     (20M:USB:100W) Hunter contact information:
 
@@ -138,8 +138,8 @@ Frequency/band, mode and power shown at the beginning of the prompt are all
 
             This is where you would start logging hunter contacts. Note that
             in this example we're using the "20M" band, our sub mode is "USB"
-            and we have yet not specified an optional transmit power. At bare
-            minimum all we need to do at this point to log a contact is to
+            and we may or may not have an optional transmit power specified. At
+            bare minimum all we need to do at this point to log a contact is to
             type in a hunter's callsign.
             Example: "k0rlo"
 
@@ -238,26 +238,19 @@ NOTE: If you entered more than one operator to the "Operator callsign(s)"
 
 Exiting POTAlog:
 
-    To exit the program you can either press <CTRL-C> or type "exit" at any
+    To exit the program, you can either press <CTRL-C> or type "exit" at any
     prompt. POTAlog never leaves the log file open while running, so
     there is no danger of losing your log data.
 
-POTAlog ADI file:
+POTAlog ADI file(s):
 
-    The ADI file that POTAlog generates adheres to the following POTA
+    The ADI file(s) that POTAlog generates adhere to the following POTA
     documentation:
 
 https://docs.pota.app/docs/activator_reference/ADIF_for_POTA_reference.html
 
-Installing POTAlog:
+Bugs/suggestions/comments:
 
-    Install "python3" and "git" on your system. The method of installation
-    depends on the operating system, so that will not be detailed here.
+    email: potalog@nankoweap.com
 
-    Once installed, "cd" into the directory where you wish the "W3MIX" amateur
-    radio utilities to reside and type:
-    
-    git clone https://github.com/roger-oakey/W3MIX.git
-
-    POTAlog is now installed. See "Running POTAlog" at the start of this
-    document on how to run POTAlog.
+********************************************************************************
