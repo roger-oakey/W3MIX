@@ -20,7 +20,7 @@ shold be logged (default: No).
 #### Global definitions
 ####
 
-potalog_version = "2024.04.01.00"
+potalog_version = "2024.04.01.00-BETA"
 
 ####
 #### Import support modules
