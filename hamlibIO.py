@@ -5978,40 +5978,39 @@ def valid_band(band):
     ))
 
     #
-    #Split into xmit and recieve bands, if both specified
+    #See if more than one value in string
     #
-    bands = re.split(default_split, band)
+    band = re.split(default_split, band)
 
     #
-    #If more than two bands specified, it's an error
+    #If more than one band specified, it's an error
     #
-    if len(bands) > 2:
+    if len(band) > 1:
         return("""
-    More than two bands specified. For simplex operation specify a
-    single band, For split frequency operations specify two bands -
-    first transmit, then receive ONLY for split frequencies on different
+    ONly one band may be specified.
     bands.
 
-    Examples: "20M" or "20M 40M".
+    Examples: "20M" or "70CM".
 """)
 
-    errors = ""
-    for band_test in bands:
-        #
-        #If it's not a valid band, return false
-        #
-        if band_test.upper() not in Band_Enumeration:
-            errors += """
-    "{}" does not fall within a known band.
-""".format(band_test)
-
-    if errors:
-        return(errors)
+    #
+    #Save the one band in band
+    #
+    band = band[0]
 
     #
-    #Retrun xmit and recv band(s)
+    #If it's not a valid band, return false
     #
-    return(bands)
+    if band.upper() not in Band_Enumeration:
+        return("""
+"{}" does not fall within a known band.
+""".format(band))
+
+
+    #
+    #Retrun band in tuple
+    #
+    return((band,))
 
 def valid_frequency(freq):
     """
@@ -6031,58 +6030,39 @@ def valid_frequency(freq):
     ))
 
     #
-    #Split into xmit and recieve ferquencies, if both specified
+    #See if more than one value in string
     #
-    freq = re.split(default_split, freq)
+    frequency = re.split(default_split, freq)
 
     #
-    #If more than two frequencies specified, it's an error
+    #If more than one frequency specified, it's an error
     #
-    if len(freq) > 2:
+    if len(frequency) > 1:
         return("""
-    More than two frequencies specified. For simplex operation specify a
-    single frequency. For split frequency operations specify two
-    frequencies - first transmit, then receive.
+    Only one frequency may pecified.
 
-    Examples: "14.200" or "14.200 14.300".
+    Examples: "14.200" or "146.52".
 """)
 
     #
-    #Initialize band and frequency pairs
+    #Save the one freqquency in frequency
     #
-    bands = []
-    freqs = []
-
-    for index in range(len(freq)):
-        #
-        #Determine band
-        #
-        band = freq_to_band(freq[index])
-        if isinstance(band, str):
-            #
-            #Frequency not valid, return error text supplied.
-            #
-            return(band)
-
-        #
-        #Save lists of band (which came back as a tuple with one entry) and
-        #frequency
-        #
-        bands.append(band[0])
-        freqs.append(freq[index])
+    frequency = frequency[0]
 
     #
-    #If transmit and receive frequencies are the same, just report one
-    #frequency and band.
+    #Determine band
     #
-    if (len(freqs) > 1) and (freqs[0] == freqs[1]):
-        freqs.pop(0)
-        bands.pop(0)
+    band = freq_to_band(frequency)
+    if isinstance(band, str):
+        #
+        #Frequency not valid, return error text supplied.
+        #
+        return(band)
 
     #
-    #Retrun xmit and rcv bands and frequencies
+    #Retrun tuple of band and frequency
     #
-    return((bands, freqs))
+    return((band[0], frequency))
 
 def valid_mode(mode_submode):
     """

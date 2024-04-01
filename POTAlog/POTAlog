@@ -3,12 +3,6 @@
 """
 Enhancements:
 
-Display frequency instead of band on hunter prompt (if you have it)
-
-Do not allow split frequencies to be different bands (test)
-
-Do not allow splits over different frequencies (only allow input of one band)
-
 Check callsign, mode and band for duplicate entries and display how long ago
 in minutes it was if a duplicate contact is discovered. Prompt is the contact
 shold be logged (default: No).
@@ -700,15 +694,11 @@ help = """
 Enter the band or frequency. If you enter a frequency, the band will be
 automatically set.
 
-If split operation, enter your transmit band first, followed by the 
-band.
+    Examples: "20M" or "70CM"
 
-    Examples: "20M", "70CM" or "40M 20M"
+Or, enter the transmit frequency.
 
-Or, enter the transmit frequency. If split operation, enter your transmit
-frequency first, followed by the receive frequency.
-
-    Examples: "14.215" or "114.215 14.275"
+    Examples: "14.215" or "146.52"
 """
 
 while(True):
@@ -720,13 +710,13 @@ Band or frequency: """).upper()
     #
     test = hamlibIO.valid_band(freq)
     if not isinstance(test, str):
-        bands = test
-        freqs = []
+        band = test[0]
+        frequency = ""
         break
 
     test = hamlibIO.valid_frequency(freq)
     if not isinstance(test, str):
-        (bands, freqs) = test
+        (band, frequency) = test
         break
 
     #
@@ -735,11 +725,10 @@ Band or frequency: """).upper()
     print("""
 Error: Incorrectly formatted band or frequency. Band should be entered
        as "20M" or "70CM" or frequency should be entered as "14.215".
-       If split bands or frequencies, enter your transmit band or
-       frequency first.
+
        Examples:
-           Band: "20M", "40M" or for split: "20M 40M".
-           Frequency: "14.215", "14.275" or for split: "14.215 14.275"
+           Band: "20M" or "40M"
+           Frequency: "14.215" or "146.52"
 """)
 
 ####
@@ -923,10 +912,18 @@ while (True):
     display_mode = mode_submode[len(mode_submode) - 1]
 
     #
+    #Display frequency if we have it, otherwise display band
+    #
+    if frequency:
+        xmit = frequency
+    else:
+        xmit = band
+
+    #
     #Get hunter information
     #
     original_hunter_info = hamlibIO.get_input(log_help, 
-        "({}:{}:{}) Hunter contact information: ".format(bands[0],
+        "({}:{}:{}) Hunter contact information: ".format(xmit,
             display_mode, display_power))
 
     #
@@ -959,19 +956,19 @@ while (True):
         #
         #Save both band and don't report frequencies
         #
-        bands = test
-        freqs = []
+        band = test[0]
+        frequency = ""
         continue
 
     #
-    #See if new frequency (-ies) have been specified
+    #See if new frequency has been specified
     #
     test = hamlibIO.valid_frequency(hunter_info)
     if not isinstance(test, str):
         #
         #Save both band(s) and frequencies
         #
-        (bands, freqs) = test
+        (bands, frequency) = test
         continue
 
     #
@@ -1132,8 +1129,10 @@ Error: Park "{}" specified more than once. Park number typo?
         #
         #See if we're temporarily overriding the frequency
         #
-        if not isinstance(hamlibIO.valid_frequency(component), str):
-            override_freq.append(component)
+        test = hamlibIO.valid_frequency(component)
+        if not isinstance(test, str):
+            override_band.append(test[0])
+            override_freq.append(test[1])
             continue
 
         #
@@ -1205,33 +1204,22 @@ Error: More than two RST entries. The RST report you send to the hunter is the
         bad_entry = True
 
     #
-    #Assure we're not overriding BOTH the frequency and band
+    #Assure we're not overriding BOTH the frequency and band or specifying more
+    #than one overide band.
     #
-    if override_freq and override_band:
+    if len(override_band) > 1:
         print("""
-Error: Cannot override BOTH frequency and band. Specify one or the other.
+Error: More than one override band specified OR both a frequency and band
+       override specified. Only specify an override band or frequency.
 """)
         bad_entry = True
 
     #
-    #Make sure we didn't specify more than two override frequencies
-    #(support split operation)
+    #Make sure we didn't specify more than one override frequency
     #
-    if len(override_freq) > 2:
+    if len(override_freq) > 1:
         print("""
-Error: More than two override frequencies specified. Specify one
-       frequency for simplex operation, two for splitband.
-""")
-        bad_entry = True
-
-    #
-    #Make sure we didn't specify more than two override bands (support
-    #split operation)
-    #
-    if len(override_band) > 2:
-        print("""
-Error: More than two override bands specified. Specify one band for
-       simplex operation, two for splitband.
+Error: More than one override frequencies specified.
 """)
         bad_entry = True
 
@@ -1250,15 +1238,6 @@ Error: More than two override bands specified. Specify one band for
     #### only contain MY_SIG = POTA
     ####
 
-    #
-    #If overriding frequency or band, format into lists
-    #
-    if override_freq:
-        (override_band, override_freq) = \
-            hamlibIO.valid_frequency(" ".join(override_freq))
-    elif override_band:
-        override_band = hamlibIO.valid_band(" ".join(override_band))
-
     QSO_record = {"MY_SIG":"POTA"}
 
     #
@@ -1275,24 +1254,41 @@ Error: More than two override bands specified. Specify one band for
         QSO_record[mode_tags[index]] = mode
 
     #
-    #Save transmit, and optionally receive band in record. Use
-    #override_band if band temporarily overriden for this log entry.
+    #Save transmit receive band (same) in record. Use override_band[0] if band
+    #temporarily overriden for this log entry.
     #
-    for index, band in enumerate(override_band if override_band else bands):
-        QSO_record[band_tags[index]] = band
+    for tag in band_tags:
+        #
+        #Save band as both transmit and recieve band using override_band if
+        #specified, the "sticky" band if not.
+        #
+        QSO_record[tag] = override_band[0] if override_band else band
 
     #
-    #Save transmit, and optionally receive frequencies in record.  Use
+    #Save transmit and receive frequencies (same) in record.  Use
     #override_freq if frequency temporarily overriden for this log entry.
     #
-    #Tricky code here. Note the test for override_band. If JUST the band
-    #was overiddden, override_freq is an empty list so we won't store
-    #frequencies, which is correct. If we overrided frequencies, we have
-    #BOTH bands and frequencies, so in that case we'll use the non-empty
-    #override_freq list.
+    #Tricky code here. If we have an override frequency, save it. If we don't,
+    #see if we have a frequency specified and if so, save it. Otherwise we
+    #don't save a frequency.
     #
-    for index, freq in enumerate(override_freq if override_band else freqs):
-        QSO_record[frequency_tags[index]] = freq
+    #
+    for tag in frequency_tags:
+        if override_freq:
+            #
+            #We're overriding the frequency, save the override frequency
+            #
+            QSO_record[tag] = override_freq[0]
+        else:
+            #
+            #We're not overrriding the frequency, save the "sticky" frequency if
+            #one is specified
+            #
+            if frequency:
+                #
+                #Sticky frequency specified
+                #
+                QSO_record[tag] = frequency
 
     #
     #Save optional transmit and receive power in record
