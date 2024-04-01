@@ -1,0 +1,77 @@
+Installing POTAlog:
+
+    To install and run POTAlog requires that Git and Python3 be installed on the
+    host system. Find your host system below for specific instructions.
+
+    Windows:
+
+        In a browser go to the following link and follow the instructions to
+        install Git on Windows:
+
+            https://git-scm.com/download/win
+
+        Now go to the following link and follow the instructions to install
+        Python3 on Windows (choose the latest "Stable Release", NOT the latest
+        release!):
+
+            https://www.python.org/downloads/windows/
+
+        Once Git and Python3 are installed, open a DOS window and install
+        POTAlog:
+
+            git clone https://github.com/roger-oakey/W3MIX.git
+
+        To run POTAlog, open a DOS window and type:
+
+            python3 W3MIX\POTAlog\POTAlog
+
+    Chromebook:
+
+        Follow these instructions to enable Linux on your Chromebook:
+
+            https://support.google.com/chromebook/answer/9145439
+
+        If you can't find the "Linux development environment" under:
+
+            Settings->Advanced->Developers
+
+        Your Chromebook is probably too old to support Linux.
+
+        Now follow the "All Linux platforms" instructions, below.
+
+    Apple:
+
+        To be supplied.
+
+    Linux distributions:
+
+        There are too many different distributions of Linux around to document
+        the setup process for them all. Just make sure both Git and Python3 are
+        installed on your version of Linux, and then follow the "All platforms"
+        instructions, below, for running POTAlog.
+
+    All Linux platforms:
+
+        Once you have started your Linux environment, you will be at a terminal
+        window. Issue the following two commands to setup POTAlog (note that
+        character case is important!):
+
+            cd ~
+            git clone https://github.com/roger-oakey/W3MIX.git
+
+        This will create a "W3MIX" directory in your home directory. To run
+        POTAlog, type the following commands (note that character case is
+        important!):
+
+            cd ~
+            ./W3MIX/POTAlog/POTAlog
+
+        ...and POTAlog will start running and your ADIF (.adi) log files will be
+        created in your home directory.
+
+        From time to time to assure that you have the latest and greatest
+        version of POTAlog, type the following two commands:
+
+            cd ~/W3MIX
+            git pull
+

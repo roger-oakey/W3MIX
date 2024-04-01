@@ -1,6 +1,6 @@
 ********************************************************************************
 
-Note: Installation instructions at end of this help text.
+Note: Installation instructions are found in W3MIX/POTAlog_install.txt
 
 POTAlog
 
@@ -31,28 +31,38 @@ About POTAlog:
     process, but the generated log can then be used to populate your personal
     log with more complete data.
 
-    POTAlog will run on any system, Windows, iOS or Linux, that has Python3
-    installed, but it was primarily targeted for modern, inexpensive Chromebooks
-    on which you can enable Linux. See the end of this documentation for POTAlog
-    installation instructions.
+    NOTE: Alphabetic characters can be entered in upper or lower case. All text
+          is changed to upper case except optional comments.
 
-Running POTAlog:
+          At any question prompt you can type "?" and get detailed help for that
+          specific question. If you type "HELP" this entire help document will
+          be printed again.
 
-    Change directory into W3MIX/POTAlog" directory and type "./POTAlog" to run
-    POTAlog.
-
-NOTE: Alphabetic characters can be entered in upper or lower case. All text is
-      changed to upper case except optional comments.
-
-      At any question prompt you can type "?" and get detailed help for that
-      specific question. If you type "HELP" this entire help document will be
-      printed again.
+POTAlog startup questions:
 
     Operator callsign(s):
 
         Enter your operator callsign. If you have multiple operators "sharing a
         microphone" on one radio, you can enter multiple callsigns on one line.
         Examples: "W3MIX", "W3MIX/mobile", "W3MIX K0RLO" or "W3MIX,K0RLO"
+
+    Band or frequency:
+
+        The initial band or frequency being to be used. If you supply a
+        frequency, the band will automatically be calculated.
+
+        If you enter a band, no frequency will be logged, so it is suggested you
+        always supply a frequency to get both band and frequency.
+        Examples: "20M", "23cm", "14.200" or "146.52"
+
+    Operating mode:
+
+        The mode or sub mode that will be used for POTA contacts. You can
+        specify a mode, a sub mode or both a mode and sub mode. If you specify
+        both, the sub mode will be checked to assure that it's a sub mode of the
+        mode specified. If only a sub mode is specified, the mode will be
+        automatically determined.
+        Examples: "CW", "SSB", "SSB USB" or "USB"
 
     Park code(s):
 
@@ -61,19 +71,41 @@ NOTE: Alphabetic characters can be entered in upper or lower case. All text is
         all the park identifiers on one line.
         Examples: "us-1211", "us-1211 us-1214" or "us-1211,us-1214"
 
-    State/province/etc. of activation [NONE]:
+    State/province/etc. of activation if park spans states [None specified]:
 
-        This assists the POTA software identify what state you're located in
-        if a park or trail crosses multiple states. Typically this isn't the
+        This assists the POTA software in identifying what state you're located
+        in if a park or trail crosses multiple states. Typically this isn't the
         case and you can just press <Enter> to leave this field blank.
 
     Special event callsign [NONE]:
 
         If you are doing a POTA club or group activation, enter the event's
-        ONE callsign here. It can have a "/" designation if necessary.
+        ONE callsign here. It can have a "/" designation if necessary. Just
+        press <Enter> if you are not participating in a special event.
         Examples: "W1BOB" or "W1BOB/R01"
 
-NOTE: At this point POTAlog can figure out the log file name. It will
+    Enter date (YYYYMMDD) for manual time entry,
+        Press <Enter> for current UTC time:
+
+        If you are entering contacts from a written logbook after your
+        activation, enter the UCT date of contact in the format of YYYYMMDD. You
+        will then be required to enter each QSO time (HH:MM or HH:MM:SS).
+
+        If you are logging as you make contacts, just press <Enter> and the
+        current date and time will be automatically generated for each
+        contact.
+
+    Add POTA-identifying comments to all log entries [(Y), n]: ?
+        Press <Enter> or "Y" to add POTA-unique comments to all logged QSOs
+        (unless they're overridden with QSO-specific coments, when logged).
+        These comments are not used by POTA but are helpful when they appear in
+        your own, private logs to identify your POTA activations and "Park to
+        Park" contacts. Answering "N" will suppress POTA comments.
+        Sample POTA comments:
+            POTA activation: US-1211
+            POTA park to park: From US-1211 to US-1214
+
+NOTE: At this point the .adi log file name(s) are constructed. POTAlog will
       check to see if a log file of that name already exists. If it does, the
       following question will be asked:
 
@@ -89,41 +121,12 @@ NOTE: At this point POTAlog can figure out the log file name. It will
       lost) and a new log started. POTAlog will display new filename of
       the old log file.
 
-    Band or frequency:
-
-        The initial band or frequency being to be used. If you supply a
-        frequency, the band will automatically be calculated.
-
-        If you enter a band, no frequency will be logged, so it is suggested you
-        always supply a frequency to get both band and frequency.
-        Examples: "20M" or "14.200"
-
-    Operating mode:
-
-        The mode or sub mode that will be used for POTA contacts. You can
-        specify a mode, a sub mode or both a mode and sub mode. If you specify
-        both, the sub mode will be checked to assure that it's a sub mode of the
-        mode specified. If only a sub mode is specified, the mode will be
-        automatically determined.
-        Examples: "CW", "SSB", "SSB USB" or "USB"
-
-    Manual date and time:
-
-        If you are entering contacts from a written logbook after your
-        activation, enter the UCT date of contact in the format of
-        YYYYMMDD. You will then be required to enter each QSO time
-        (HH:MM or HH:MM:SS).
-
-        If you are logging as you make contacts, just press <ENTER> and the
-        current date and time will be automatically generated for each
-        contact.
-
 After the above questions you will enter logging mode. The prompt will
 appear as follows:
 
-    (20M:USB:NOPWR) Hunter contact information:
+    (20M:USB:nopwr) Hunter contact information:
 
-Note that you may want to enter the power you're transmitting. If so enter your
+Note that you may want to enter your power transmitting power. If so enter your
 power with a "w" after it like: "100w". Now the prompt will appear as:
 
     (20M:USB:100W) Hunter contact information:
