@@ -406,7 +406,7 @@ Error: "{}" is not a valid POTA country. Must be one of:
         return("""
 Error: "{}" is not a valid format for a park.
    It must be one or more letters, followed by a dash and then four digits.
-   Examples: "US-1211" or "VE-5678".
+   Examples: "US-1211" or "CA-5678".
 """.format(park))
 
     return("")
@@ -425,6 +425,7 @@ Error: "{}" is not a valid format for a park.
 print("""
 Type "?" at any time to get help on the specific question being asked.
 Type "HELP" at any time to get the complete documentation for POTAlog.
+Type "EXIT" at any time to exit POTAlog.
 """)
 
 ####
@@ -474,11 +475,83 @@ Operator callsign(s): """).upper()
     if not bad_callsign:
         break
 
-
 #
 #Save unique operators
 #
 operators = sorted(ops)
+
+####
+#### Get the operating frequency or band
+####
+
+help = """
+Enter the band or frequency. If you enter a frequency, the band will be
+automatically set.
+
+    Examples: "20M" or "70CM"
+
+Or, enter the transmit frequency.
+
+    Examples: "14.215" or "146.52"
+"""
+
+while(True):
+    freq = hamlibIO.get_input(help, """
+Band or frequency: """).upper()
+
+    #
+    #Validate band or frequency
+    #
+    test = hamlibIO.valid_band(freq)
+    if not isinstance(test, str):
+        band = test[0]
+        frequency = ""
+        break
+
+    test = hamlibIO.valid_frequency(freq)
+    if not isinstance(test, str):
+        (band, frequency) = test
+        break
+
+    #
+    #Report error and ask again
+    #
+    print("""
+Error: Incorrectly formatted band or frequency. Band should be entered
+       as "20M" or "70CM" or frequency should be entered as "14.215".
+
+       Examples:
+           Band: "20M" or "40M"
+           Frequency: "14.215" or "146.52"
+""")
+
+####
+#### Get the operating mode
+####
+
+help = """
+Enter the QSO mode and, if desired, the submode. Note that you can
+specify JUST the submode and the mode will be determined.
+
+    Examples: "CW", "SSB", "SSB USB", "LSB" or "OLIVIA 4/125"
+"""
+
+while(True):
+    mode = hamlibIO.get_input(help, """
+Operating mode: """).upper()
+
+    #
+    #Validate mode
+    #
+    test = hamlibIO.valid_mode(mode)
+    if not isinstance(test, str):
+        mode_submode = test
+        break
+
+    #
+    #Report error and ask again
+    #
+    print(test)
 
 ####
 #### Ask what park(s) are being activated
@@ -492,7 +565,7 @@ help = """
 Enter one or more park codes. Multiple park codes are when you're
 activating multiple parks from one location.
 
-    Examples: "VE-1211" or "US-1211 US-1214"
+    Examples: "CA-1211" or "US-1211 US-1214"
 """
 
 while(True):
@@ -644,6 +717,57 @@ if special_event_callsign:
 else:
     callsigns = operators
 
+####
+#### See if manual time entry by asking for date
+####
+
+help = """
+For manual time enty, enter the date in the format YYYYMMDD. This will
+REQUIRE a time to be entered for every log entry. For automatic
+UTC timestamping of log entries, just press <Enter>.
+
+    Example: 20221103
+"""
+
+while(True):
+    manual_date = hamlibIO.get_input(help, """
+Enter date (YYYYMMDD) for manual time entry,
+    Press <Enter> for current UTC time: """,
+        default="").upper()
+
+    #
+    #If nothing typed, leave manual_dt as ""
+    #
+    if not manual_date:
+        break
+
+    #
+    #Validate time format
+    #
+    test = hamlibIO.Date(manual_date)
+    if not test:
+        break
+
+    #
+    #Report error and ask again
+    #
+    print("Error: Date error" + test)
+
+####
+#### See if POTA comments should be added to every log entry
+####
+
+help = """
+Do you wish the following comments to be added to each log entry to identify
+these QSOs as POTA activations?
+
+    Examples:
+        """ + pota_activation_format.format(", ".join(parks)) + """
+        """ + pota_park2park_format.format(", ".join(parks), "US-1211") + "\n"
+
+add_comments = hamlibIO.get_yes_no(help, """
+Add POTA-identifying comments to all log entries""")
+
 help = """
 Enter "N" (or just press <Enter>) if you wish to continue to log hunter
 contacts in the existing file.
@@ -685,116 +809,6 @@ to "{}"
 """.format(filename, new_filename))
             os.rename(filename, new_filename)
 
-
-####
-#### Get the operating frequency or band
-####
-
-help = """
-Enter the band or frequency. If you enter a frequency, the band will be
-automatically set.
-
-    Examples: "20M" or "70CM"
-
-Or, enter the transmit frequency.
-
-    Examples: "14.215" or "146.52"
-"""
-
-while(True):
-    freq = hamlibIO.get_input(help, """
-Band or frequency: """).upper()
-
-    #
-    #Validate band or frequency
-    #
-    test = hamlibIO.valid_band(freq)
-    if not isinstance(test, str):
-        band = test[0]
-        frequency = ""
-        break
-
-    test = hamlibIO.valid_frequency(freq)
-    if not isinstance(test, str):
-        (band, frequency) = test
-        break
-
-    #
-    #Report error and ask again
-    #
-    print("""
-Error: Incorrectly formatted band or frequency. Band should be entered
-       as "20M" or "70CM" or frequency should be entered as "14.215".
-
-       Examples:
-           Band: "20M" or "40M"
-           Frequency: "14.215" or "146.52"
-""")
-
-####
-#### Get the operating mode
-####
-
-help = """
-Enter the QSO mode and, if desired, the submode. Note that you can
-specify JUST the submode and the mode will be determined.
-
-    Examples: "CW", "SSB", "SSB USB", "LSB" or "OLIVIA 4/125"
-"""
-
-while(True):
-    mode = hamlibIO.get_input(help, """
-Operating mode: """).upper()
-
-    #
-    #Validate mode
-    #
-    test = hamlibIO.valid_mode(mode)
-    if not isinstance(test, str):
-        mode_submode = test
-        break
-
-    #
-    #Report error and ask again
-    #
-    print(test)
-
-####
-#### See if manual time entry by asking for date
-####
-
-help = """
-For manual time enty, enter the date in the format YYYYMMDD. This will
-REQUIRE a time to be entered for every log entry. For automatic
-timestamping of log entries, just press <Enter>.
-
-    Example: 20221103
-"""
-
-while(True):
-    manual_date = hamlibIO.get_input(help, """
-Enter date (YYYYMMDD) for manual time entry,
-    Press <Enter> for automatic time entry: """,
-        default="").upper()
-
-    #
-    #If nothing typed, leave manual_dt as ""
-    #
-    if not manual_date:
-        break
-
-    #
-    #Validate mode
-    #
-    test = hamlibIO.Date(manual_date)
-    if not test:
-        break
-
-    #
-    #Report error and ask again
-    #
-    print("Error: Date error" + test)
-
 #
 #Put a space before the first log entry
 #
@@ -828,33 +842,27 @@ At this prompt you can do the following:
             USB
             SSB LSB
 
-    Specify a new band or transmit AND receive band. If you specify a
-    band, no frequency will be recorded.
-        Examples:
+    Specify a new band. If you specify a band, no frequency will be recorded.
+        Example:
             20M
-            20M 40M
 
-    Specify a new frequency or transmit AND receive frequency. If you
-    specify the frequency, the band will be automatically be determined
-    and recorded in the log.
-        Examples:
+    Specify a new frequency. If you specify the frequency, the band will
+    automatically be determined and recorded in the log.
+        Example:
             14.215
-            14.215 14.250
 
-    Specify a new transmit power. Enter "0W" to stop recording a
-    transmit power.
+    Specify a new transmit power. Enter "0W" to stop recording a transmit power.
         Examples:
             10W
             1500W
 
     Enter a QSO:
-        Enter the hunter's callsign, followed by optional information in
-        any order like sent and received RSTs, hunter transmit power,
-        park to park identifier(s) and a comment enclosed in double
-        quotes. Additionally, you can temporarily change the frequency
-        or band for this one QSO (for example, you jumped to another
-        frequency to do a park-to-park). Split frequencies or bands
-        can be specified as well, your transmit band or frequency first.
+        Enter the hunter's callsign first, followed by optional information in
+        any order like sent and received RSTs, hunter transmit power, park to
+        park identifier(s) and a comment enclosed in double quotes.
+        Additionally, you can temporarily change the frequency or band for this
+        one QSO (for example, you jumped to another frequency to do a
+        park-to-park).
             Examples:
                 Absolute minimum, just the callsign:
                     K0RLO
@@ -862,28 +870,23 @@ At this prompt you can do the following:
                     K0RLO 59 57 10W "It's Roger!"
                 Twofer park-to-park and all optional information:
                     K0RLO "Twofer from Roger" US-1111 US-2222 10W 59 57
-
                 Changing frequency or band for one QSO:
                     K0RLO 59 57 US-1111 14.250
                     K0RLO 59 57 US-1111 17M
 
-        All optional information may be entered in ANY order except sent
-        and received RST and in case of split operation, your transmit 
-        requency/band and receive frequency/band - which must be entered
-        in that order.
+        All optional information may be entered in ANY order.
 
 QSO Examples:
 
-K0RLO
-K0RLO 59 57
-K0RLO 598 577            [CW RST]
-K0RLO 59 57 US-1214       [Park to Park; if multiple parks, list thenm all]
-K0RLO 59 57 US-1214 10W   [Hunter running 10W QRP]
-K0RLO 59 57 14.250       [Temporary change to 14.250 for this hunter]
-K0RLO 59 57 80M          [Temporary change to the 80M band for this hunter]
-K0RLO 59 57 "It's Greg!" [Add a comment]
+K0RLO                       [Minimum required information to log a QSO]
+K0RLO 59 57                 [Phone RS]
+K0RLO 598 577               [CW RST]
+K0RLO 59 57 US-1214 10W     [Hunter running 10W QRP]
+K0RLO 59 57 US-1214         [Park to Park; if multiple parks, list thenm all]
+K0RLO 59 57 14.250 US-1214  [Temporary change to 14.250 for this park to park]
+K0RLO 59 57 80M             [Temporary change to the 80M band for this hunter]
+K0RLO 59 57 "It's Greg!"    [Add a comment]
 """
-
 
 op_help = """
 Enter "Y" (or just press <Enter>) if the specified operator has performed an
@@ -914,10 +917,7 @@ while (True):
     #
     #Display frequency if we have it, otherwise display band
     #
-    if frequency:
-        xmit = frequency
-    else:
-        xmit = band
+    xmit = frequency if frequency else band
 
     #
     #Get hunter information
@@ -949,7 +949,7 @@ while (True):
         continue
 
     #
-    #See if new band(s) have been specified
+    #See if a new band has been specified
     #
     test = hamlibIO.valid_band(hunter_info)
     if not isinstance(test, str):
@@ -966,9 +966,9 @@ while (True):
     test = hamlibIO.valid_frequency(hunter_info)
     if not isinstance(test, str):
         #
-        #Save both band(s) and frequencies
+        #Save both band and frequencies
         #
-        (bands, frequency) = test
+        (band, frequency) = test
         continue
 
     #
@@ -1317,9 +1317,9 @@ Error: More than one override frequencies specified.
     #
     if comment:
         QSO_record["COMMENT"] = comment
-    else:
+    elif add_comments:
         #
-        #No comment so supply a default comment
+        #No comment and coments should be supplied, so supply a default comment
         #
         if hunter_parks:
             #
