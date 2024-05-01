@@ -102,8 +102,8 @@ POTAlog startup questions:
         your own, private logs to identify your POTA activations and "Park to
         Park" contacts. Answering "N" will suppress POTA comments.
         Sample POTA comments:
-            POTA activation: US-1211
-            POTA park to park: From US-1211 to US-1214
+            POTA from US-1211
+            POTA from US-1211 to US-1214
 
 NOTE: At this point the .adi log file name(s) are constructed. POTAlog will
       check to see if a log file of that name already exists. If it does, the

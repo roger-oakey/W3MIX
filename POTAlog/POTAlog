@@ -56,8 +56,8 @@ re_all = r'ALL'
 re_noall = r'NOALL'
 adif_file_extension = ".adi"
 
-pota_activation_format = "POTA activation: {}"
-pota_park2park_format = "POTA park to park: From {} to {}"
+pota_activation_format = "POTA from {}"
+pota_park2park_format = "POTA from {} to {}"
 
 #
 #This is the order that the ADIF tags will be placed into the file for
@@ -905,6 +905,7 @@ Enter "N" if the specified operator is unable to perform an exchange with
 #
 prompt_for_operators = True
 
+last_original_hunter_info = False
 while (True):
     #
     #See if power is being reported
@@ -932,6 +933,40 @@ while (True):
             display_mode, display_power))
 
     #
+    #See if this is a "ditto" log entry (second operator at a park to park, for
+    #example).
+    #
+    #Ditto has callsign followed by one, only one double quote (") and nothing
+    #else, for example: 'W3MIX "'
+    #
+    check_for_ditto = re.split(hamlibIO.default_split, original_hunter_info)
+    if (len(check_for_ditto) == 2) and (check_for_ditto[1] == '"'):
+        #
+        #We have a callsign and double quotes, this is a ditto. Check to assure
+        #that the last_original_hunter_info is valid
+        #
+        if not last_original_hunter_info:
+            #
+            #No last hunter info, report error
+            #
+            print("""
+Error: No previous log information found. A setting was changed (power,
+       frequency, etc.) or the last log attempt had an error.""")
+            continue
+
+        #
+        #Substitute the last callsign with this new callsign
+        #
+        original_hunter_info = re.sub(r'^\S+',
+                                      check_for_ditto[0],
+                                      last_original_hunter_info)
+
+    #
+    #Invalidate last hunter original info until we have another valid log entry
+    #
+    last_original_hunter_info = False
+
+    #
     #Upcase all input into hunter_info
     #
     hunter_info = original_hunter_info.upper()
@@ -941,11 +976,11 @@ while (True):
     #activators
     #
     #As a default we ask if each operator should be logged. If you
-    #type "ALL" then all operators will be logged without asking.
+    #type "ALL" then all operators will be logged without asking. "NOALL"
+    #(default) will cause us to prompt for each operator.
     #
-    logall = re.fullmatch(re_all, hunter_info)
     nologall = re.fullmatch(re_noall, hunter_info)
-    if logall or nologall:
+    if re.fullmatch(re_all, hunter_info) or nologall:
         #
         #We specified "ALL" or "NOALL". Set prompt to be same as nologall
         #since nologall = True means to prompt for operators.
@@ -1451,5 +1486,10 @@ Error: More than one override frequencies specified.
             f = open(log_filename, "a")
             f.write(QSO)
             f.close()
+
+        #
+        #Save the last entry in case we get a "ditto" for another operator
+        #
+        last_original_hunter_info = original_hunter_info
 
 exit()
