@@ -1359,7 +1359,8 @@ Error: More than one override frequencies specified.
         QSO_record["COMMENT"] = comment
     elif add_comments:
         #
-        #No comment and coments should be supplied, so supply a default comment
+        #No specified comment and comments should be supplied, so supply a
+        #default comment
         #
         if hunter_parks:
             #
