@@ -1,37 +1,20 @@
 #!/usr/bin/python3
 
-"""
-Enhancements:
+#### From: https://www.iso.org/iso-3166-country-codes.html
 
-Check callsign, mode and band for duplicate entries and display how long ago
-in minutes it was if a duplicate contact is discovered. Prompt is the contact
-shold be logged (default: No).
-"""
-
-###############################################################################
-###############################################################################
-####
-#### Simple POTA logging program that allows freeform input of contacts
-####
-###############################################################################
-###############################################################################
-
-####
-#### Global definitions
-####
-
-potalog_version = "2024.04.01.00-BETA"
-
-####
-#### Import support modules
-####
-
-import os
 import re
-import shutil
-import sys
-import time
-import potalib
+
+####
+#### Globals
+####
+
+iso_filename = "ISO3116-2:2020"
+
+f = open(iso_filename, "r")
+all_file = f.read()
+f.close()
+
+for record in "\n"split(all_file)
 
 ####
 #### Import large tables and help files to de-clutter the program
@@ -57,8 +40,8 @@ re_all = r'ALL'
 re_noall = r'NOALL'
 adif_file_extension = ".adi"
 
-pota_activation_format = "POTA from {}"
-pota_park2park_format = "POTA from {} to {}"
+pota_activation_format = "POTA activation: {}"
+pota_park2park_format = "POTA park to park: From {} to {}"
 
 #
 #This is the order that the ADIF tags will be placed into the file for
@@ -89,6 +72,226 @@ mode_tags = (
     "MODE",
     "SUBMODE"
     )
+
+pota_countries = {
+    "YA" : "AFGHANISTAN",
+    "ZA" : "ALBANIA",
+    "7X" : "ALGERIA",
+    "AS" : "AMERICAN SAMOA",
+    "C3" : "ANDORRA",
+    "D2" : "ANGOLA",
+    "VP2E" : "ANGUILLA",
+    "CE9" : "ANTARCTICA",
+    "V2" : "ANTIGUA AND BARBUDA",
+    "AR" : "ARGENTINA",
+    "EK" : "ARMENIA",
+    "P4" : "ARUBA",
+    "VK" : "AUSTRALIA",
+    "OE" : "AUSTRIA",
+    "4J" : "AZERBAIJAN",
+    "CU" : "AZORES",
+    "C6" : "BAHAMAS",
+    "A9" : "BAHRAIN",
+    "OCEAN I." : "BANABA I.",
+    "S2" : "BANGLADESH",
+    "8P" : "BARBADOS",
+    "EV" : "BELARUS",
+    "ON" : "BELGIUM",
+    "V3" : "BELIZE",
+    "TY" : "BENIN",
+    "VP9" : "BERMUDA",
+    "A5" : "BHUTAN",
+    "CP" : "BOLIVIA",
+    "T9" : "BOSNIA-HERZEGOVINA",
+    "A2" : "BOTSWANA",
+    "BR" : "BRAZIL",
+    "V85" : "BRUNEI DARUSSALAM",
+    "BG" : "BULGARIA",
+    "XT" : "BURKINA FASO",
+    "9U5" : "BURUNDI",
+    "CV" : "CABRO VERDE",
+    "XU" : "CAMBODIA",
+    "TJ" : "CAMEROON",
+    "CA" : "CANADA",
+    "ZF" : "CAYMAN IS.",
+    "TL" : "CENTRAL AFRICA",
+    "TT" : "CHAD",
+    "BY" : "CHINA",
+    "HK" : "COLOMBIA",
+    "D6" : "COMOROS",
+    "CR" : "COSTA RICA",
+    "TU" : "COTE D'IVOIRE",
+    "9A" : "CROATIA",
+    "CO" : "CUBA",
+    "PJ2" : "CURACAO",
+    "5B" : "CYPRUS",
+    "OK" : "CZECH REPUBLIC",
+    "P5" : "DEMOCRATIC PEOPLE'S REP. OF KOREA",
+    "OU" : "DENMARK",
+    "J2" : "DJIBOUTI",
+    "J7" : "DOMINICA",
+    "HI" : "DOMINICAN REPUBLIC",
+    "HC" : "ECUADOR",
+    "SU" : "EGYPT",
+    "YS" : "EL SALVADOR",
+    "GB" : "ENGLAND",
+    "3C" : "EQUATORIAL GUINEA",
+    "E3" : "ERITREA",
+    "ES" : "ESTONIA",
+    "ET" : "ETHIOPIA",
+    "VP8" : "FALKLAND ISLANDS",
+    "OY" : "FAROE ISLANDS",
+    "DA" : "FEDERAL REPUBLIC OF GERMANY",
+    "3D2" : "FIJI",
+    "OH" : "FINLAND",
+    "F" : "FRANCE",
+    "V6" : "FRENCHE STATE OF MICRONESIA",
+    "TR" : "GABON",
+    "4L" : "GEORGIA",
+    "9G1" : "GHANA",
+    "SV" : "GREECE",
+    "OX" : "GREENLAND",
+    "GD" : "GRENADA",
+    "TG" : "GUATEMALA",
+    "GU" : "GUERNSEY",
+    "3X" : "GUINEA",
+    "GW" : "GUINEA-BISSAU",
+    "8R" : "GUYANA",
+    "HH" : "HAITI",
+    "HR" : "HONDURAS",
+    "HA" : "HUNGARY",
+    "TF" : "ICELAND",
+    "VU" : "INDIA",
+    "YB" : "INDONESIA",
+    "EP" : "IRAN",
+    "YI" : "IRAQ",
+    "EI" : "IRELAND",
+    "GD" : "ISLE OF MAN",
+    "4X" : "ISRAEL",
+    "I" : "ITALY",
+    "6Y" : "JAMAICA",
+    "JA" : "JAPAN",
+    "GJ" : "JERSEY",
+    "JY" : "JORDAN",
+    "UL" : "KAZAKHSTAN",
+    "5Z4" : "KENYA",
+    "3DA" : "KINGDOM OF ESWATINI",
+    "T31" : "KIRIBATI",
+    "9K2" : "KUWAIT",
+    "UM" : "KYRGYZSTAN",
+    "XW" : "LAOS",
+    "YL" : "LATVIA",
+    "OD5" : "LEBANON",
+    "7P8" : "LESOTHO",
+    "EL" : "LIBERIA",
+    "5A" : "LIBYA",
+    "HB0" : "LIECHTENSTEIN",
+    "LY" : "LITHUANIA",
+    "LX" : "LUXEMBOURG",
+    "XX9" : "MACAO",
+    "Z3" : "MACEDONIA",
+    "5R" : "MADAGASCAR",
+    "7Q7" : "MALAWI",
+    "9M" : "MALAYSIA",
+    "8Q6" : "MALDIVES",
+    "TZ" : "MALI",
+    "9H" : "MALTA",
+    "MP" : "MARIANA ISLANDS",
+    "V7" : "MARSHALL ISLANDS",
+    "5T" : "MAURITANIA",
+    "3B8" : "MAURITIUS",
+    "XE" : "MEXICO",
+    "UO" : "MOLDOVA",
+    "JT" : "MONGOLIA",
+    "4O" : "MONTENEGRO",
+    "VP2M" : "MONTSERRAT",
+    "CN" : "MOROCCO",
+    "C9" : "MOZAMBIQUE",
+    "XZ2" : "MYANMAR",
+    "V5" : "NAMIBIA",
+    "C2" : "NAURU",
+    "9N" : "NEPAL",
+    "PA" : "NETHERLANDS",
+    "ZL" : "NEW ZEALAND",
+    "YN" : "NICARAGUA",
+    "5U" : "NIGER",
+    "5N" : "NIGERIA",
+    "E6" : "NIUE",
+    "LA" : "NORWAY",
+    "A4" : "OMAN",
+    "AP" : "PAKISTAN",
+    "T8" : "PALAU",
+    "ZC6" : "PALESTINE",
+    "PA" : "PANAMA",
+    "P29" : "PAPUA NEW GUINEA",
+    "PY" : "PARAQUAY",
+    "OA" : "PERU",
+    "DU" : "PHILIPPINES",
+    "SP" : "POLAND",
+    "CT" : "PORTUGAL",
+    "A7" : "QATAR",
+    "Z6" : "REPUBLIC OF KOSOVO",
+    "TN" : "REPUBLIC OF THE CONGO",
+    "YO" : "ROMANIA",
+    "UA" : "RUSSIAN FEDERATION",
+    "9X5" : "RWANDA",
+    "T7" : "SAN MARINO",
+    "S9" : "SAO TOME AND PRINCIPE",
+    "HZ" : "SAUDI ARABIA",
+    "6W" : "SENEGAL",
+    "YT" : "SERBIA",
+    "S79" : "SEYCHELLES",
+    "9L1" : "SIERRA LEONE",
+    "9V" : "SINGAPORE",
+    "OM" : "SLOVAK REPUBLIC",
+    "SIF" : "SLOVENIA",
+    "H44" : "SOLOMON IS.",
+    "T5" : "SOMALIA",
+    "ZR" : "SOUTH AFRICA",
+    "HL" : "SOUTH KOREA",
+    "ST0" : "SOUTH SUDAN [REPUBLIC OF]",
+    "1A0KM" : "SOVEREIGN MILITARY ORDER OF MALTA",
+    "EA" : "SPAIN",
+    "4S7" : "SRI LANKA",
+    "PJ7" : "ST MAARTEN",
+    "V4" : "ST. KITTS AND NEVIS",
+    "J6" : "ST. LUCIA",
+    "J8" : "ST. VINCENT",
+    "ST" : "SUDAN",
+    "PZ" : "SURINAME",
+    "SM" : "SWEDEN",
+    "HB" : "SWITZERLAND",
+    "EY" : "SYRIA",
+    "YK" : "SYRIA",
+    "BV" : "TAIWAN",
+    "5H3" : "TANZANIA",
+    "HS" : "THAILAND",
+    "C5" : "THE GAMBIA",
+    "4W" : "TIMOR-LESTE",
+    "5V" : "TOGO",
+    "A3" : "TONGA",
+    "9Y" : "TRINIDAD AND TOBAGO",
+    "3V8" : "TUNISIA",
+    "TA" : "TURKEY",
+    "EZ" : "TURKMENISTAN",
+    "VP5" : "TURKS AND CAICOS IS.",
+    "T2" : "TUVALU",
+    "5X" : "UGANDA",
+    "UB" : "UKRAINE",
+    "A6" : "UNITED ARAB EMIRATES",
+    "4U1UN" : "UNITED NATIONS HQ",
+    "US" : "UNITED STATES OF AMERICA",
+    "CV" : "URUGUAY",
+    "UI" : "UZBEKISTAN",
+    "YJ8" : "VANUATU",
+    "HV" : "VATICAN",
+    "YV" : "VENEZUELA",
+    "VN" : "VIET NAM",
+    "S0" : "WESTERN SAHARA",
+    "7O" : "YEMEN",
+    "9J2" : "ZAMBIA",
+    "Z2" : "ZIMBABWE",
+    }
 
 ####
 #### Subroutines
@@ -170,23 +373,11 @@ def valid_park(park):
     #
     park_parts = re.findall(r'^\s*(.+?)\s*-\d{4,5}\s*$', park)
     if park_parts:
-        if park_parts[0] not in potalib.countries:  
-        
-            #
-            #Save country list and two letter code for each country
-            #
-            country_pairs = {}
-            for key, value in potalib.countries.items():
-                country_pairs[value[0]] = key
-
-            #
-            #Sort by country name and create list of valid two letter country
-            #codes.
-            #
+        if park_parts[0] not in pota_countries:
             country_list = ""
-            for key in sorted(country_pairs):
-                country_list += '       "{}" ({})\n'.format(
-                    key, country_pairs[key])
+            country_order = {v: k for k, v in pota_countries.items()}
+            for key, value in sorted(country_order.items()):
+                country_list += '       "{}" ({})\n'.format(value, key)
             return("""
 Error: "{}" is not a valid POTA country. Must be one of:
 {}""".format(park_parts[0], country_list))
@@ -196,9 +387,9 @@ Error: "{}" is not a valid POTA country. Must be one of:
         #If a park identifier has a bad format, report it
         #
         return("""
-Error: "{}" is not a valid format for a park. It must be one or more
-       letters, followed by a dash and then four or five digits.
-    Examples: "US-10211" or "CA-5678".
+Error: "{}" is not a valid format for a park.
+   It must be one or more letters, followed by a dash and then four digits.
+   Examples: "US-1211" or "CA-5678".
 """.format(park))
 
     return("")
@@ -698,7 +889,6 @@ Enter "N" if the specified operator is unable to perform an exchange with
 #
 prompt_for_operators = True
 
-last_original_hunter_info = False
 while (True):
     #
     #See if power is being reported
@@ -726,40 +916,6 @@ while (True):
             display_mode, display_power))
 
     #
-    #See if this is a "ditto" log entry (second operator at a park to park, for
-    #example).
-    #
-    #Ditto has callsign followed by one, only one double quote (") and nothing
-    #else, for example: 'W3MIX "'
-    #
-    check_for_ditto = re.split(hamlibIO.default_split, original_hunter_info)
-    if (len(check_for_ditto) == 2) and (check_for_ditto[1] == '"'):
-        #
-        #We have a callsign and double quotes, this is a ditto. Check to assure
-        #that the last_original_hunter_info is valid
-        #
-        if not last_original_hunter_info:
-            #
-            #No last hunter info, report error
-            #
-            print("""
-Error: No previous log information found. A setting was changed (power,
-       frequency, etc.) or the last log attempt had an error.""")
-            continue
-
-        #
-        #Substitute the last callsign with this new callsign
-        #
-        original_hunter_info = re.sub(r'^\S+',
-                                      check_for_ditto[0],
-                                      last_original_hunter_info)
-
-    #
-    #Invalidate last hunter original info until we have another valid log entry
-    #
-    last_original_hunter_info = False
-
-    #
     #Upcase all input into hunter_info
     #
     hunter_info = original_hunter_info.upper()
@@ -769,11 +925,11 @@ Error: No previous log information found. A setting was changed (power,
     #activators
     #
     #As a default we ask if each operator should be logged. If you
-    #type "ALL" then all operators will be logged without asking. "NOALL"
-    #(default) will cause us to prompt for each operator.
+    #type "ALL" then all operators will be logged without asking.
     #
+    logall = re.fullmatch(re_all, hunter_info)
     nologall = re.fullmatch(re_noall, hunter_info)
-    if re.fullmatch(re_all, hunter_info) or nologall:
+    if logall or nologall:
         #
         #We specified "ALL" or "NOALL". Set prompt to be same as nologall
         #since nologall = True means to prompt for operators.
@@ -1152,8 +1308,7 @@ Error: More than one override frequencies specified.
         QSO_record["COMMENT"] = comment
     elif add_comments:
         #
-        #No specified comment and comments should be supplied, so supply a
-        #default comment
+        #No comment and coments should be supplied, so supply a default comment
         #
         if hunter_parks:
             #
@@ -1280,10 +1435,5 @@ Error: More than one override frequencies specified.
             f = open(log_filename, "a")
             f.write(QSO)
             f.close()
-
-        #
-        #Save the last entry in case we get a "ditto" for another operator
-        #
-        last_original_hunter_info = original_hunter_info
 
 exit()
