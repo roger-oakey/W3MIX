@@ -75,6 +75,7 @@ POTAlog startup questions:
         This assists the POTA software in identifying what state you're located
         in if a park or trail crosses multiple states. Typically, this isn't the
         case and you can just press <Enter> to leave this field blank.
+	Examples: "US-CO", "US-HI" or "US-VT"
 
     Special event callsign [NONE]:
 
@@ -95,13 +96,12 @@ POTAlog startup questions:
         contact.
 
     Add POTA-identifying comments to all log entries [(Y), n]: ?
-
-        Press <Enter> or "Y" to add POTA-unique comments to all logged QSOs
-        (unless they're overridden with QSO-specific comments, when logged).
-        These comments are not used by POTA but are helpful when they appear in
-        your own, private logs to identify your POTA activations and "Park to
-        Park" contacts. Answering "N" will suppress POTA comments.
-        Sample POTA comments:
+        Press <Enter> or "Y" to add automatically generated POTA comments to all
+        logged QSOs (unless they're overridden with QSO-specific comments, when
+        logged). These comments are not used by POTA but are helpful when they
+        appear in your own, private logs to identify your POTA activations and
+        "Park to Park" contacts. Answering "N" will suppress POTA comments.
+        Sample automatically generated comments:
             POTA from US-1211
             POTA from US-1211 to US-1214
 
@@ -199,6 +199,10 @@ NOTE: If you entered more than one operator to the "Operator callsign(s)"
       POTAlog will not log the contacts for the absent operator if you answer
       "N".
 
+      If you do not want to be prompted for each operator, just type "ALL" at
+      the "Hunter contact information:" prompt and all operators will be logged
+      without prommpting. Type "NOALL" if you wish to be prompted aagain.
+
         Changing the "sticky" frequency, mode and power "on the fly":
 
             At the "Hunter contact information:" prompt you also can change
@@ -235,6 +239,14 @@ NOTE: If you entered more than one operator to the "Operator callsign(s)"
                 To change your transmit power, enter a power in watts (whole
                 numbers only) followed by a "W".
                 Examples: "100w", "5w" or "1500w"
+12345678911234567892123456789312345678941234567895123456789612345678971234567898
+        Logging multiple operators (either activators or hunters):
+                If you have contacted multiple operators, once the first
+                operator's exchange has been logged, you can duplicate the
+                logged information for the next operator by simply entering the
+                next operator's callsign and a double quote (") otherwise known
+                as a "ditto" mark.
+                Example: 'W3MIX "'
 
 Exiting POTAlog:
 

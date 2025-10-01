@@ -680,10 +680,17 @@ K0RLO                       [Minimum required information to log a QSO]
 K0RLO 59 57                 [Phone RS]
 K0RLO 598 577               [CW RST]
 K0RLO 59 57 US-1214 10W     [Hunter running 10W QRP]
-K0RLO 59 57 US-1214         [Park to Park; if multiple parks, list thenm all]
+K0RLO 59 57 US-1214         [Park to Park; if multiple parks, list them all]
 K0RLO 59 57 14.250 US-1214  [Temporary change to 14.250 for this park to park]
 K0RLO 59 57 80M             [Temporary change to the 80M band for this hunter]
 K0RLO 59 57 "It's Greg!"    [Add a comment]
+
+    To log additional operators with the previously logged information, enter
+    the next operator's call sign followed by a double quote (a ditto mark - ").
+
+    If you have multiple operators at your park and ALWAYS want to log all
+    operators without prompting, type "ALL". To re-enable prompting for each
+    operator, type "NOALL".
 """
 
 op_help = """
