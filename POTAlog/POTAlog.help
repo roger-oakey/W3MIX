@@ -239,7 +239,7 @@ NOTE: If you entered more than one operator to the "Operator callsign(s)"
                 To change your transmit power, enter a power in watts (whole
                 numbers only) followed by a "W".
                 Examples: "100w", "5w" or "1500w"
-12345678911234567892123456789312345678941234567895123456789612345678971234567898
+
         Logging multiple operators (either activators or hunters):
                 If you have contacted multiple operators, once the first
                 operator's exchange has been logged, you can duplicate the
