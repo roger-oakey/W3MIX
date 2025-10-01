@@ -20,7 +20,7 @@ shold be logged (default: No).
 #### Global definitions
 ####
 
-potalog_version = "2024.04.01.00-BETA"
+potalog_version = "2025.10.01.00"
 
 ####
 #### Import support modules
@@ -448,7 +448,7 @@ Error: You must specify a country-state or country-province for an activation.
         #
         #See if this state or province is valid within this country
         #
-        if state in hamlib.state_enumeration[country]:
+        if state in hamlibIO.state_enumeration[country]:
             #
             #Reassemble country and state and use it for logging
             #
@@ -456,7 +456,7 @@ Error: You must specify a country-state or country-province for an activation.
             break
 
         print("""          
-Error: "{}" is not a valid state or province for within country "{}"
+Error: "{}" is not a valid state or province within country "{}"
 """.format(state_split[1], state_split[0]))
         continue
 

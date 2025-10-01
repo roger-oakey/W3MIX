@@ -117,7 +117,7 @@ NOTE: At this point the .adi log file name(s) are constructed. POTAlog will
         and start a new log [(N), y]:
 
       Press <Enter> (default of "NO") if you wish to ADD to the existing log.
-      Type "N"<Enter> if you wish the existing log to be renamed (it won't be
+      Type "Y"<Enter> if you wish the existing log to be renamed (it won't be
       lost) and a new log started. POTAlog will display new filename of
       the old log file.
 
