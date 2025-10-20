@@ -654,6 +654,11 @@ At this prompt you can do the following:
             10W
             1500W
 
+    Enable or disable automatic logging of all activators:
+        Examples:
+            ALL   (log all activators without prompting)
+            NOALL (prompt for each activator)
+
     Enter a QSO:
         Enter the hunter's callsign first, followed by optional information in
         any order like sent and received RSTs, hunter transmit power, park to
@@ -687,10 +692,6 @@ K0RLO 59 57 "It's Greg!"    [Add a comment]
 
     To log additional operators with the previously logged information, enter
     the next operator's call sign followed by a double quote (a ditto mark - ").
-
-    If you have multiple operators at your park and ALWAYS want to log all
-    operators without prompting, type "ALL". To re-enable prompting for each
-    operator, type "NOALL".
 """
 
 op_help = """
