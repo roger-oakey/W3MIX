@@ -20,7 +20,7 @@ shold be logged (default: No).
 #### Global definitions
 ####
 
-potalog_version = "2025.10.01.00"
+potalog_version = "2025.11.16.00"
 
 ####
 #### Import support modules
@@ -41,8 +41,8 @@ import potalib
 #Put parent directory in the system path in order to import hamlibIO.py
 #from the directory above
 #
-this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-parent_dir = os.path.dirname(this_dir)
+home_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+parent_dir = os.path.dirname(home_dir)
 sys.path.append(parent_dir)
 
 import hamlibIO
@@ -654,11 +654,6 @@ At this prompt you can do the following:
             10W
             1500W
 
-    Enable or disable automatic logging of all activators:
-        Examples:
-            ALL   (log all activators without prompting)
-            NOALL (prompt for each activator)
-
     Enter a QSO:
         Enter the hunter's callsign first, followed by optional information in
         any order like sent and received RSTs, hunter transmit power, park to
@@ -685,13 +680,10 @@ K0RLO                       [Minimum required information to log a QSO]
 K0RLO 59 57                 [Phone RS]
 K0RLO 598 577               [CW RST]
 K0RLO 59 57 US-1214 10W     [Hunter running 10W QRP]
-K0RLO 59 57 US-1214         [Park to Park; if multiple parks, list them all]
+K0RLO 59 57 US-1214         [Park to Park; if multiple parks, list thenm all]
 K0RLO 59 57 14.250 US-1214  [Temporary change to 14.250 for this park to park]
 K0RLO 59 57 80M             [Temporary change to the 80M band for this hunter]
 K0RLO 59 57 "It's Greg!"    [Add a comment]
-
-    To log additional operators with the previously logged information, enter
-    the next operator's call sign followed by a double quote (a ditto mark - ").
 """
 
 op_help = """

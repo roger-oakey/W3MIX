@@ -1,19 +1,27 @@
+import os
 import re
-import codecs
+import sys
 
 ####
 #### Global definitions
 ####
 
-version = "2024.07.29.00-BETA"
+version = "2025.11.16.00"
 
-is3116_filename = 'ISO3116/ISO3116'
+is3116_directory = 'ISO3116'
+is3116_filename = 'ISO3116'
 
 ###
 ### Read in all ISO3116 information and put into a dictonary based on country
 ### name.
 ###
-        
+
+#
+#Put parent directory in the system path in order to import hamlibIO.py
+#from the directory above
+#
+home_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+is3116_filename = os.path.join(home_dir, is3116_directory, is3116_filename)
 country_file = open(is3116_filename, encoding='latin-1')
 
 countries = {}
